@@ -1,0 +1,31 @@
+{
+  "name": "ruqqus-js",
+  "version": "1.0.0",
+  "description": "A Node.js wrapper of the Ruqqus API; designed for Ruqqus Applications.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ruqqus",
+    "ruqqus-js",
+    "ruqqusapi",
+    "api",
+    "bots",
+    "npm"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/acikek/ruqqus-js.git"
+  },
+  "author": "acikek",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/acikek/ruqqus-js/issues"
+  },
+  "homepage": "https://github.com/acikek/ruqqus-js#readme",
+  "dependencies": {
+    "chalk": "^4.1.0",
+    "needle": "^2.5.0"
+  }
+}
