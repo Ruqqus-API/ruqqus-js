@@ -24,7 +24,8 @@ class Client extends EventEmitter {
     refreshKeys = {
       client_id: options.id,
       client_secret: options.token,
-      grant_type: "refresh"
+      grant_type: "refresh",
+      refresh_token: options.refresh || null
     };
 
     this.online = false,

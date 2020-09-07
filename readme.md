@@ -70,6 +70,7 @@ Creates a new Ruqqus Client instance.
   - `token` (String): The Application secret
   - `code` (String): The one-time use authorization code
   - `agent` (String): Optional custom `user_agent`
+  - `refresh` (String): Optional refresh token (overrides authorization code)
 
 ### `Client.guilds.get(name)`
 Gets a guild with the specified name.
