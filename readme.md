@@ -207,25 +207,26 @@ Submits a post to the guild.
 - **String** `title`: The title of the post
 - **String** `body`: The body of the post. Can include HTML and Markdown
 
-### `Guild.fetchPosts(sort, limit)`
+### `Guild.fetchPosts(sort, limit, page)`
 Fetches an array of post objects from the guild.
 
 #### Parameters
 
 - **String** `sort`: The post sorting method. Defaults to "new"
 - **Number** `limit`: The amount of post objects to return. Defaults to 24
+- **Number** `page`: The page index to fetch posts from. Defaults to 1
 
 #### Return
 
 - **Array**: The post objects
 
-### `Guild.fetchComments(sort, limit)`
+### `Guild.fetchComments(limit, page)`
 Fetches an array of comment objects from the guild.
 
 #### Parameters
 
-- **String** `sort`: The comment sorting method. Defaults to "new"
 - **Number** `limit`: The amount of comment objects to return. Defaults to 24
+- **Number** `page`: The page index to fetch comments from. Defaults to 1
 
 #### Return
 
@@ -262,3 +263,38 @@ Downvotes the comment.
 
 ### `Comment.removeVote()`
 Removes the client's vote from the comment.
+
+### `User.fetchPosts(sort, limit, page)`
+Fetches an array of post objects from the user.
+
+#### Parameters
+
+- **String** `sort`: The post sorting method. Defaults to "new"
+- **Number** `limit`: The amount of post objects to return. Defaults to 24
+- **Number** `page`: The page index to fetch posts from. Defaults to 1
+
+#### Return
+
+- **Array**: The post objects
+
+### `User.fetchComments(limit, page)`
+Fetches an array of comment objects from the user.
+
+#### Parameters
+
+- **Number** `limit`: The amount of comment objects to return. Defaults to 24
+- **Number** `page`: The page index to fetch comments from. Defaults to 1
+
+#### Return
+
+- **Array**: The comment objects
+
+
+## Contributing
+
+If you find any issues/bugs with this package, feel free to open a Pull Request at the [Github repository](github.com/acikek/ruqqus-js). If you'd rather not, you can always talk to me on the [official Ruqqus Discord server](https://ruqqus.com/discord) or add me at **acikek#1169**.
+
+
+## License
+
+MIT © 2020 Kyle Prince

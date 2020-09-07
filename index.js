@@ -312,13 +312,14 @@ class Guild {
    * 
    * @param {String} sort The post sorting method. Defaults to "new".
    * @param {Number} limit The amount of post objects to return. Defaults to 24.
+   * @param {Number} page The page index to fetch posts from. Defaults to 1.
    * @returns {Array} The post objects.
    */
 
-  async fetchPosts(sort, limit) {
+  async fetchPosts(sort, limit, page) {
     let posts = [];
 
-    let resp = await needle("GET", `https://ruqqus.com/api/v1/guild/${this.name}/listing`, { sort: sort || "new" }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    let resp = await needle("GET", `https://ruqqus.com/api/v1/guild/${this.name}/listing`, { sort: sort || "new", page: page || 1 }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
     if (limit) resp.body.data.splice(limit, resp.body.data.length - limit);
     
     for await (let post of resp.body.data) {
@@ -331,15 +332,15 @@ class Guild {
   /**
    * Fetches an array of comment objects from the guild.
    * 
-   * @param {String} sort The comment sorting method. Defaults to "new".
    * @param {Number} limit The amount of comment objects to return. Defaults to 24.
+   * @param {Number} page The page index to fetch comments from. Defaults to 1.
    * @returns {Array} The comment objects.
    */
 
-  async fetchComments(sort, limit) {
+  async fetchComments(sort, limit, page) {
     let comments = [];
 
-    let resp = await needle("GET", `https://ruqqus.com/api/v1/guild/${this.name}/comments`, { sort: sort || "new" }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    let resp = await needle("GET", `https://ruqqus.com/api/v1/guild/${this.name}/comments`, { page: page || 1 }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
     if (limit) resp.body.data.splice(limit, resp.body.data.length - limit);
     
     for await (let comment of resp.body.data) {
@@ -587,6 +588,49 @@ class User {
           }
         }),
     }
+  }
+
+  /**
+   * Fetches an array of post objects from the user.
+   * 
+   * @param {String} sort The post sorting method. Defaults to "new".
+   * @param {Number} limit The amount of post objects to return. Defaults to 24.
+   * @param {Number} page The page index to fetch posts from. Defaults to 1.
+   * @returns {Array} The post objects.
+   */
+
+  async fetchPosts(sort, limit, page) {
+    let posts = [];
+
+    let resp = await needle("GET", `https://ruqqus.com/api/v1/user/${this.username}/listing`, { sort: sort || "new", page: page || 1 }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    if (limit) resp.body.data.splice(limit, resp.body.data.length - limit);
+    
+    for await (let post of resp.body.data) {
+      posts.push(await new Post(post.id)._fetchData());
+    }
+
+    return posts;
+  }
+
+  /**
+   * Fetches an array of comment objects from the user.
+   * 
+   * @param {Number} limit The amount of comment objects to return. Defaults to 24.
+   * @param {Number} page The page index to fetch comments from. Defaults to 1.
+   * @returns {Array} The comment objects.
+   */
+
+  async fetchComments(limit, page) {
+    let comments = [];
+
+    let resp = await needle("GET", `https://ruqqus.com/api/v1/user/${this.username}/comments`, { page: page || 1 }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    if (limit) resp.body.data.splice(limit, resp.body.data.length - limit);
+    
+    for await (let comment of resp.body.data) {
+      comments.push(await new Comment(comment.id)._fetchData());
+    }
+
+    return comments;
   }
 }
 
