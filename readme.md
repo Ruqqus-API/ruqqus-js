@@ -292,7 +292,7 @@ Fetches an array of comment objects from the user.
 
 ## Contributing
 
-If you find any issues/bugs with this package, feel free to open a Pull Request at the [Github repository](github.com/acikek/ruqqus-js). If you'd rather not, you can always talk to me on the [official Ruqqus Discord server](https://ruqqus.com/discord) or add me at **acikek#1169**.
+If you find any issues/bugs with this package, feel free to open a Pull Request at the [Github repository](https://github.com/acikek/ruqqus-js). If you'd rather not, you can always talk to me on the [official Ruqqus Discord server](https://ruqqus.com/discord) or add me at **acikek#1169**.
 
 
 ## License
