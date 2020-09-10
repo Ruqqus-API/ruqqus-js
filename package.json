@@ -1,6 +1,6 @@
 {
   "name": "ruqqus-js",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "A Node.js wrapper of the Ruqqus API; designed for Ruqqus Applications.",
   "main": "index.js",
   "scripts": {
