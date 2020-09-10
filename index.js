@@ -365,7 +365,7 @@ class Post {
       author: {
         username: resp.body.author,
         title: resp.body.author_title ? {
-          name: resp.body.author_title.text,
+          name: resp.body.author_title.text.startsWith(",") ? resp.body.author_title.text.split(", ")[1] : resp.body.author_title.text,
           id: resp.body.author_title.id,
           kind: resp.body.author_title.kind,
           color: resp.body.author_title.color
@@ -462,7 +462,7 @@ class Comment {
       author: {
         username: resp.body.author,
         title: resp.body.title ? {
-          name: resp.body.title.text,
+          name: resp.body.title.text.startsWith(",") ? resp.body.title.text.split(", ")[1] : resp.body.title.text,
           id: resp.body.title.id,
           kind: resp.body.title.kind,
           color: resp.body.title.color
@@ -553,7 +553,7 @@ class User {
     return {
       username: resp.body.username,
       title: resp.body.title ? {
-        name: resp.body.title.text,
+        name: resp.body.title.text.startsWith(",") ? resp.body.title.text.split(", ")[1] : resp.body.title.text,
         id: resp.body.title.id,
         kind: resp.body.title.kind,
         color: resp.body.title.color
