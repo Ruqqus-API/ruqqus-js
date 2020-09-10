@@ -276,8 +276,8 @@ class Guild {
       full_link: `https://ruqqus.com${resp.body.permalink}`,
       subscribers: resp.body.subscriber_count,
       guildmasters: resp.body.mods_count,
-      icon_url: resp.body.profile_url,
-      banner_url: resp.body.banner_url,
+      icon_url: resp.body.profile_url.startsWith("/assets") ? `https://ruqqus.com/${resp.body.profile_url}` : resp.body.profile_url,
+      banner_url: resp.body.banner_url.startsWith("/assets") ? `https://ruqqus.com/${resp.body.banner_url}` : resp.body.banner_url,
       created_at: resp.body.created_utc,
       flags: {
         banned: resp.body.is_banned,
