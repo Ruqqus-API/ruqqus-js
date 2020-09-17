@@ -62,6 +62,8 @@ class Client extends EventEmitter {
           resp.body.scopes.split(",").forEach(s => {
             scopes[s] = true;
           });
+
+          if (!scopes.read) console.log(`${chalk.yellow("WARN!")} Missing "Read" Scope. ${chalk.yellow("Post and Comment events will not be emitted!")}`);
         }
 
         if (resp.body.refresh_token) refreshKeys.refresh_token = resp.body.refresh_token;
@@ -72,7 +74,7 @@ class Client extends EventEmitter {
         setTimeout(() => { this._refreshToken() }, refreshIn);
 
         if (!this.online) {
-          this.user.data = await this._fetchIdentity();
+          if (scopes.identity) this.user.data = await this._fetchIdentity(); else this.user.data = undefined;
           this.emit("login");
           this.online = true;
         }
@@ -83,6 +85,8 @@ class Client extends EventEmitter {
     setTimeout(() => { this._checkEvents() }, 10000);
     
     if (this.eventNames().includes("post")) {
+      if (!scopes.read) return;
+
       needle("GET", "https://ruqqus.com/api/v1/all/listing", { sort: "new" }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
         .then((resp) => {
           if (resp.body.error) return;
@@ -102,6 +106,8 @@ class Client extends EventEmitter {
     }
 
     if (this.eventNames().includes("comment")) {
+      if (!scopes.read) return;
+      
       needle("GET", "https://ruqqus.com/api/v1/front/comments", { sort: "new" }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
         .then((resp) => {
           if (resp.body.error) return;
@@ -163,7 +169,6 @@ class Client extends EventEmitter {
      */
 
     async isAvailable(name) {
-      if (!scopes.read) return console.log(`${chalk.red("ERR!")} Missing "Read" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
       if (!name) return undefined;
       let resp = await needle("GET", `https://ruqqus.com/api/v1/board_available/${name}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
 
@@ -253,7 +258,6 @@ class Client extends EventEmitter {
      */
     
     async isAvailable(username) {
-      if (!scopes.read) return console.log(`${chalk.red("ERR!")} Missing "Read" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
       if (!username) return undefined;
       let resp = await needle("GET", `https://ruqqus.com/api/v1/is_available/${username}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
 
@@ -325,6 +329,8 @@ class Guild {
    */
 
   async fetchPosts(sort, limit, page) {
+    if (!scopes.read) return console.log(`${chalk.red("ERR!")} Missing "Read" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+
     let posts = [];
 
     let resp = await needle("GET", `https://ruqqus.com/api/v1/guild/${this.name}/listing`, { sort: sort || "new", page: page || 1 }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
@@ -346,6 +352,8 @@ class Guild {
    */
 
   async fetchComments(sort, limit, page) {
+    if (!scopes.read) return console.log(`${chalk.red("ERR!")} Missing "Read" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+
     let comments = [];
 
     let resp = await needle("GET", `https://ruqqus.com/api/v1/guild/${this.name}/comments`, { page: page || 1 }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
@@ -608,6 +616,8 @@ class User {
    */
 
   async fetchPosts(sort, limit, page) {
+    if (!scopes.read) return console.log(`${chalk.red("ERR!")} Missing "Read" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+
     let posts = [];
 
     let resp = await needle("GET", `https://ruqqus.com/api/v1/user/${this.username}/listing`, { sort: sort || "new", page: page || 1 }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
@@ -629,6 +639,8 @@ class User {
    */
 
   async fetchComments(limit, page) {
+    if (!scopes.read) return console.log(`${chalk.red("ERR!")} Missing "Read" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+
     let comments = [];
 
     let resp = await needle("GET", `https://ruqqus.com/api/v1/user/${this.username}/comments`, { page: page || 1 }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
