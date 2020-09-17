@@ -46,7 +46,15 @@ class Client extends EventEmitter {
     needle("POST", "https://ruqqus.com/oauth/grant", refreshKeys.refresh_token ? refreshKeys : fetchKeys, { user_agent })
       .then(async (resp) => {
         if (resp.body.oauth_error) {
-          console.log(`${chalk.red("FATAL ERR!")} Invalid Authcode - ${chalk.yellow("403 ACCESS_DENIED")}`);
+          let type;
+
+          if (resp.body.oauth_error.startsWith("Invalid refresh_token")) {
+            type = "Refresh Token";
+          } else if (resp.body.oauth_error.startsWith("Invalid code")) {
+            type = "Authcode";
+          }
+
+          console.log(`${chalk.red("FATAL ERR!")} Invalid ${type} - ${chalk.yellow("403 ACCESS_DENIED")}`);
           process.exit();
         }
 
