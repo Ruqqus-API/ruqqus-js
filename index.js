@@ -565,6 +565,16 @@ class User {
     let resp = await needle("GET", `https://ruqqus.com/api/v1/user/${this.username}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
 
     if (!resp.body.id) return undefined;
+
+    if (resp.body.is_banned) {
+      return {
+        username: resp.body.username,
+        id: resp.body.id,
+        link: resp.body.permalink,
+        full_link: `https://ruqqus.com${resp.body.permalink}`,
+        ban_reason: resp.body.ban_reason,
+      }
+    }
     
     return {
       username: resp.body.username,
