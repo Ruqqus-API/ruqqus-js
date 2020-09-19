@@ -55,7 +55,7 @@ class Client extends EventEmitter {
             type = "Authcode";
           }
 
-          throw new OAuthError({
+          return new OAuthError({
             message: `Invalid ${type}`,
             code: 401,
             fatal: true
@@ -67,7 +67,7 @@ class Client extends EventEmitter {
             scopes[s] = true;
           });
 
-          if (!scopes.read) throw new OAuthWarning({
+          if (!scopes.read) return new OAuthWarning({
             message: 'Missing "Read" Scope',
             warning: "Post and Comment events will not be emitted!"
           });
@@ -83,7 +83,7 @@ class Client extends EventEmitter {
         if (!this.online) {
           if (scopes.identity) this.user.data = await this._fetchIdentity(); else {
             this.user.data = undefined;
-            throw new OAuthWarning({
+            return new OAuthWarning({
               message: 'Missing "Identity" Scope',
               warning: "Client user data will be undefined!"
             });
@@ -171,7 +171,7 @@ class Client extends EventEmitter {
      */
 
     async fetchData(name) {
-      if (!scopes.read) throw new OAuthError({
+      if (!scopes.read) return new OAuthError({
         message: 'Missing "Read" Scope',
         code: 401
       });
@@ -214,7 +214,7 @@ class Client extends EventEmitter {
      */
 
     async fetchData(id) {
-      if (!scopes.read) throw new OAuthError({
+      if (!scopes.read) return new OAuthError({
         message: 'Missing "Read" Scope',
         code: 401
       });
@@ -243,7 +243,7 @@ class Client extends EventEmitter {
      */
 
     async fetchData(id) {
-      if (!scopes.read) throw new OAuthError({
+      if (!scopes.read) return new OAuthError({
         message: 'Missing "Read" Scope',
         code: 401
       });
@@ -272,7 +272,7 @@ class Client extends EventEmitter {
      */
 
     async fetchData(username) {
-      if (!scopes.read) throw new OAuthError({
+      if (!scopes.read) return new OAuthError({
         message: 'Missing "Read" Scope',
         code: 401
       });
@@ -339,7 +339,7 @@ class Guild {
    */
 
   post(title, body) {
-    if (!scopes.create) throw new OAuthError({
+    if (!scopes.create) return new OAuthError({
       message: 'Missing "Create" Scope',
       code: 401
     });
@@ -362,7 +362,7 @@ class Guild {
    */
 
   async fetchPosts(sort, limit, page) {
-    if (!scopes.read) throw new OAuthError({
+    if (!scopes.read) return new OAuthError({
       message: 'Missing "Read" Scope',
       code: 401
     });
@@ -388,7 +388,7 @@ class Guild {
    */
 
   async fetchComments(sort, limit, page) {
-    if (!scopes.read) throw new OAuthError({
+    if (!scopes.read) return new OAuthError({
       message: 'Missing "Read" Scope',
       code: 401
     });
@@ -471,7 +471,7 @@ class Post {
    */
 
   comment(body) {
-    if (!scopes.create) throw new OAuthError({
+    if (!scopes.create) return new OAuthError({
       message: 'Missing "Create" Scope',
       code: 401
     });
@@ -484,7 +484,7 @@ class Post {
    */
 
   upvote() {
-    if (!scopes.vote) throw new OAuthError({
+    if (!scopes.vote) return new OAuthError({
       message: 'Missing "Vote" Scope',
       code: 401
     });
@@ -497,7 +497,7 @@ class Post {
    */
 
   downvote() {
-    if (!scopes.vote) throw new OAuthError({
+    if (!scopes.vote) return new OAuthError({
       message: 'Missing "Vote" Scope',
       code: 401
     });
@@ -510,7 +510,7 @@ class Post {
    */
 
   removeVote() {
-    if (!scopes.vote) throw new OAuthError({
+    if (!scopes.vote) return new OAuthError({
       message: 'Missing "Vote" Scope',
       code: 401
     });
@@ -523,14 +523,14 @@ class Post {
    */
 
   delete() {
-    if (!scopes.delete) throw new OAuthError({
+    if (!scopes.delete) return new OAuthError({
       message: 'Missing "Delete" Scope',
       code: 401
     });
 
     needle("POST", `https://ruqqus.com/api/v1/delete_post/${this.id}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
       .then((resp) => {
-        if (resp.body.error) throw new OAuthError({
+        if (resp.body.error) return new OAuthError({
           message: "Post Deletion Failed",
           code: 403
         });
@@ -598,7 +598,7 @@ class Comment {
    */
 
   reply(body) {
-    if (!scopes.create) throw new OAuthError({
+    if (!scopes.create) return new OAuthError({
       message: 'Missing "Create" Scope',
       code: 401
     });
@@ -611,7 +611,7 @@ class Comment {
    */
 
   upvote() {
-    if (!scopes.vote) throw new OAuthError({
+    if (!scopes.vote) return new OAuthError({
       message: 'Missing "Vote" Scope',
       code: 401
     });
@@ -624,7 +624,7 @@ class Comment {
    */
 
   downvote() {
-    if (!scopes.vote) throw new OAuthError({
+    if (!scopes.vote) return new OAuthError({
       message: 'Missing "Vote" Scope',
       code: 401
     });
@@ -637,7 +637,7 @@ class Comment {
    */
 
   removeVote() {
-    if (!scopes.vote) throw new OAuthError({
+    if (!scopes.vote) return new OAuthError({
       message: 'Missing "Vote" Scope',
       code: 401
     });
@@ -650,14 +650,14 @@ class Comment {
    */
 
   delete() {
-    if (!scopes.delete) throw new OAuthError({
+    if (!scopes.delete) return new OAuthError({
       message: 'Missing "Delete" Scope',
       code: 401
     });
 
     needle("POST", `https://ruqqus.com/api/v1/delete/comment/${this.id}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
       .then((resp) => {
-        if (resp.body.error) throw new OAuthError({
+        if (resp.body.error) return new OAuthError({
           message: "Post Deletion Failed",
           code: 403
         });
@@ -735,7 +735,7 @@ class User {
    */
 
   async fetchPosts(sort, limit, page) {
-    if (!scopes.read) throw new OAuthError({
+    if (!scopes.read) return new OAuthError({
       message: 'Missing "Read" Scope',
       code: 401
     });
@@ -761,7 +761,7 @@ class User {
    */
 
   async fetchComments(limit, page) {
-    if (!scopes.read) throw new OAuthError({
+    if (!scopes.read) return new OAuthError({
       message: 'Missing "Read" Scope',
       code: 401
     });
@@ -825,7 +825,11 @@ class OAuthError extends Error {
   }
 
   throw() {
-    let stack = this.stack.split("\n").slice(1); stack[stack.length - 1] = chalk.gray(stack[1]);
+    let stack = this.stack.split("\n").slice(1); 
+    stack = stack.map((x, i) => {
+      if (i == 0) return x;
+      return chalk.gray(x);
+    });
 
     console.log(this.message);
     console.log(stack.join("\n"));
