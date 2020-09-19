@@ -67,7 +67,7 @@ class Client extends EventEmitter {
             scopes[s] = true;
           });
 
-          if (!scopes.read) return new OAuthWarning({
+          if (!scopes.read) new OAuthWarning({
             message: 'Missing "Read" Scope',
             warning: "Post and Comment events will not be emitted!"
           });
@@ -83,7 +83,7 @@ class Client extends EventEmitter {
         if (!this.online) {
           if (scopes.identity) this.user.data = await this._fetchIdentity(); else {
             this.user.data = undefined;
-            return new OAuthWarning({
+            new OAuthWarning({
               message: 'Missing "Identity" Scope',
               warning: "Client user data will be undefined!"
             });
