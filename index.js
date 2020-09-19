@@ -10,6 +10,7 @@ class Client extends EventEmitter {
    * Creates a new ruqqus-js Client instance.
    * 
    * @param {Object} options The application parameters, including the authorization code.
+   * @constructor
    */
 
   constructor(options) {
@@ -54,8 +55,11 @@ class Client extends EventEmitter {
             type = "Authcode";
           }
 
-          console.log(`${chalk.red("FATAL ERR!")} Invalid ${type} - ${chalk.yellow("403 ACCESS_DENIED")}`);
-          process.exit();
+          throw new OAuthError({
+            message: `Invalid ${type}`,
+            code: 401,
+            fatal: true
+          });
         }
 
         if (resp.body.scopes) {
@@ -63,7 +67,10 @@ class Client extends EventEmitter {
             scopes[s] = true;
           });
 
-          if (!scopes.read) console.log(`${chalk.yellow("WARN!")} Missing "Read" Scope. ${chalk.yellow("Post and Comment events will not be emitted!")}`);
+          if (!scopes.read) throw new OAuthWarning({
+            message: 'Missing "Read" Scope',
+            warning: "Post and Comment events will not be emitted!"
+          });
         }
 
         if (resp.body.refresh_token) refreshKeys.refresh_token = resp.body.refresh_token;
@@ -74,7 +81,14 @@ class Client extends EventEmitter {
         setTimeout(() => { this._refreshToken() }, refreshIn);
 
         if (!this.online) {
-          if (scopes.identity) this.user.data = await this._fetchIdentity(); else this.user.data = undefined;
+          if (scopes.identity) this.user.data = await this._fetchIdentity(); else {
+            this.user.data = undefined;
+            throw new OAuthWarning({
+              message: 'Missing "Identity" Scope',
+              warning: "Client user data will be undefined!"
+            });
+          }
+
           this.emit("login");
           this.online = true;
         }
@@ -157,7 +171,11 @@ class Client extends EventEmitter {
      */
 
     async fetchData(name) {
-      if (!scopes.read) return console.log(`${chalk.red("ERR!")} Missing "Read" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+      if (!scopes.read) throw new OAuthError({
+        message: 'Missing "Read" Scope',
+        code: 401
+      });
+
       return await new Guild(name)._fetchData();
     },
 
@@ -196,7 +214,11 @@ class Client extends EventEmitter {
      */
 
     async fetchData(id) {
-      if (!scopes.read) return console.log(`${chalk.red("ERR!")} Missing "Read" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+      if (!scopes.read) throw new OAuthError({
+        message: 'Missing "Read" Scope',
+        code: 401
+      });
+
       return await new Post(id)._fetchData();
     }
   }
@@ -221,7 +243,11 @@ class Client extends EventEmitter {
      */
 
     async fetchData(id) {
-      if (!scopes.read) return console.log(`${chalk.red("ERR!")} Missing "Read" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+      if (!scopes.read) throw new OAuthError({
+        message: 'Missing "Read" Scope',
+        code: 401
+      });
+
       return await new Comment(id)._fetchData();
     }
   }
@@ -246,7 +272,11 @@ class Client extends EventEmitter {
      */
 
     async fetchData(username) {
-      if (!scopes.read) return console.log(`${chalk.red("ERR!")} Missing "Read" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+      if (!scopes.read) throw new OAuthError({
+        message: 'Missing "Read" Scope',
+        code: 401
+      });
+
       return await new User(username)._fetchData();
     },
 
@@ -309,7 +339,10 @@ class Guild {
    */
 
   post(title, body) {
-    if (!scopes.create) return console.log(`${chalk.red("ERR!")} Missing "Create" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.create) throw new OAuthError({
+      message: 'Missing "Create" Scope',
+      code: 401
+    });
     if (!title || title == " ") return console.log(`${chalk.red("ERR!")} No Post Title Provided!`);
     if (!body || body == " ") return console.log(`${chalk.red("ERR!")} No Post Body Provided!`);
 
@@ -329,7 +362,10 @@ class Guild {
    */
 
   async fetchPosts(sort, limit, page) {
-    if (!scopes.read) return console.log(`${chalk.red("ERR!")} Missing "Read" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.read) throw new OAuthError({
+      message: 'Missing "Read" Scope',
+      code: 401
+    });
 
     let posts = [];
 
@@ -352,7 +388,10 @@ class Guild {
    */
 
   async fetchComments(sort, limit, page) {
-    if (!scopes.read) return console.log(`${chalk.red("ERR!")} Missing "Read" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.read) throw new OAuthError({
+      message: 'Missing "Read" Scope',
+      code: 401
+    });
 
     let comments = [];
 
@@ -432,7 +471,11 @@ class Post {
    */
 
   comment(body) {
-    if (!scopes.create) return console.log(`${chalk.red("ERR!")} Missing "Create" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.create) throw new OAuthError({
+      message: 'Missing "Create" Scope',
+      code: 401
+    });
+
     needle("POST", "https://ruqqus.com/api/v1/comment", { parent_fullname: `t2_${this.id}`, body: body }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
   }
 
@@ -441,7 +484,11 @@ class Post {
    */
 
   upvote() {
-    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.vote) throw new OAuthError({
+      message: 'Missing "Vote" Scope',
+      code: 401
+    });
+
     needle("POST", `https://ruqqus.com/api/v1/vote/post/${this.id}/1`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
   }
   
@@ -450,7 +497,11 @@ class Post {
    */
 
   downvote() {
-    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.vote) throw new OAuthError({
+      message: 'Missing "Vote" Scope',
+      code: 401
+    });
+
     needle("POST", `https://ruqqus.com/api/v1/vote/post/${this.id}/-1`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
   }
 
@@ -459,7 +510,11 @@ class Post {
    */
 
   removeVote() {
-    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.vote) throw new OAuthError({
+      message: 'Missing "Vote" Scope',
+      code: 401
+    });
+
     needle("POST", `https://ruqqus.com/api/v1/vote/post/${this.id}/0`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
   }
 
@@ -468,10 +523,17 @@ class Post {
    */
 
   delete() {
-    if (!scopes.delete) return console.log(`${chalk.red("ERR!")} Missing "Delete" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.delete) throw new OAuthError({
+      message: 'Missing "Delete" Scope',
+      code: 401
+    });
+
     needle("POST", `https://ruqqus.com/api/v1/delete_post/${this.id}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
       .then((resp) => {
-        if (resp.body.error) return console.log(`${chalk.red("ERR!")} Post Deletion Failed - ${chalk.yellow("403 FORBIDDEN")}`);
+        if (resp.body.error) throw new OAuthError({
+          message: "Post Deletion Failed",
+          code: 403
+        });
       });
   }
 }
@@ -536,7 +598,11 @@ class Comment {
    */
 
   reply(body) {
-    if (!scopes.create) return console.log(`${chalk.red("ERR!")} Missing "Create" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.create) throw new OAuthError({
+      message: 'Missing "Create" Scope',
+      code: 401
+    });
+
     needle("POST", "https://ruqqus.com/api/v1/comment", { parent_fullname: `t3_${this.id}`, body: body }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
   }
 
@@ -545,7 +611,11 @@ class Comment {
    */
 
   upvote() {
-    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.vote) throw new OAuthError({
+      message: 'Missing "Vote" Scope',
+      code: 401
+    });
+
     needle("POST", `https://ruqqus.com/api/v1/vote/comment/${this.id}/1`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
   }
 
@@ -554,7 +624,11 @@ class Comment {
    */
 
   downvote() {
-    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.vote) throw new OAuthError({
+      message: 'Missing "Vote" Scope',
+      code: 401
+    });
+
     needle("POST", `https://ruqqus.com/api/v1/vote/comment/${this.id}/-1`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
   }
 
@@ -563,7 +637,11 @@ class Comment {
    */
 
   removeVote() {
-    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.vote) throw new OAuthError({
+      message: 'Missing "Vote" Scope',
+      code: 401
+    });
+    
     needle("POST", `https://ruqqus.com/api/v1/vote/comment/${this.id}/0`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
   }
 
@@ -572,10 +650,17 @@ class Comment {
    */
 
   delete() {
-    if (!scopes.delete) return console.log(`${chalk.red("ERR!")} Missing "Delete" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.delete) throw new OAuthError({
+      message: 'Missing "Delete" Scope',
+      code: 401
+    });
+
     needle("POST", `https://ruqqus.com/api/v1/delete/comment/${this.id}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
       .then((resp) => {
-        if (resp.body.error) return console.log(`${chalk.red("ERR!")} Comment Deletion Failed - ${chalk.yellow("403 FORBIDDEN")}`);
+        if (resp.body.error) throw new OAuthError({
+          message: "Post Deletion Failed",
+          code: 403
+        });
       });
   }
 }
@@ -650,7 +735,10 @@ class User {
    */
 
   async fetchPosts(sort, limit, page) {
-    if (!scopes.read) return console.log(`${chalk.red("ERR!")} Missing "Read" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.read) throw new OAuthError({
+      message: 'Missing "Read" Scope',
+      code: 401
+    });
 
     let posts = [];
 
@@ -673,7 +761,10 @@ class User {
    */
 
   async fetchComments(limit, page) {
-    if (!scopes.read) return console.log(`${chalk.red("ERR!")} Missing "Read" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    if (!scopes.read) throw new OAuthError({
+      message: 'Missing "Read" Scope',
+      code: 401
+    });
 
     let comments = [];
 
@@ -688,4 +779,53 @@ class User {
   }
 }
 
-module.exports = { Client }
+class OAuthWarning {
+  /**
+   * Creates and throws a new OAuth Warning.
+   * 
+   * @param {Object} options The warning parameters.
+   * @constructor
+   */
+
+  constructor(options) {
+    this.message = `${chalk.yellow("WARN!")} ${options.message} - ${chalk.yellow(options.warning || "")}`
+
+    this.throw();
+  }
+
+  throw() {
+    console.log(this.message);
+  }
+}
+
+class OAuthError {
+  /**
+   * Creates and throws a new OAuth Error.
+   * 
+   * @param {Object} options The warning parameters.
+   * @constructor
+   */
+
+  constructor(options) {
+    this.message = `${chalk.red(options.fatal ? "FATAL ERR!" : "ERR!")} ${options.message} - ${chalk.yellow(`${options.code} ${this.codeStatuses[options.code] || ""}`)}`;
+    this.fatal = options.fatal;
+    
+    this.throw();
+  }
+
+  codeStatuses = {
+    401: "NOT_AUTHORIZED",
+    403: "FORBIDDEN",
+    404: "NOT_FOUND",
+    405: "NOT_ALLOWED",
+    500: "INTERNAL_ERROR",
+    503: "UNAVAILABLE"
+  }
+
+  throw() {
+    console.log(this.message);
+    if (this.fatal) process.exit();
+  }
+}
+
+module.exports = { Client, OAuthWarning, OAuthError }

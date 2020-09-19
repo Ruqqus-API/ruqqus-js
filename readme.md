@@ -295,6 +295,24 @@ Fetches an array of comment objects from the user.
 
 - **Array**: The comment objects
 
+### `OAuthWarning(options)`
+Creates and throws a new OAuth Warning.
+
+#### Parameters
+
+- **Object** `options`: An object containing the following fields:
+  - `message` (String): The Warning message
+  - `warning` (String): The Warning consequence
+
+### `OAuthError(options)`
+Creates and throws a new OAuth Error.
+
+#### Parameters
+
+- **Object** `options`: An object containing the following fields:
+  - `message` (String): The Error message
+  - `code` (Number): The Error code. Status messages are handled automatically
+  - `fatal` (Boolean): Whether or not the Error should be treated as fatal. Will exit the process if set to `true`
 
 ## Contributing
 
