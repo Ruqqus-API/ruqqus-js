@@ -825,7 +825,7 @@ class OAuthError extends Error {
   }
 
   throw() {
-    let stack = this.stack.split("\n").slice(1); stack[1] = chalk.gray(stack[1]);
+    let stack = this.stack.split("\n").slice(1); stack[stack.length - 1] = chalk.gray(stack[1]);
 
     console.log(this.message);
     console.log(stack.join("\n"));
