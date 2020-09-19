@@ -783,7 +783,7 @@ class OAuthWarning {
   /**
    * Creates and throws a new OAuth Warning.
    * 
-   * @param {Object} options The warning parameters.
+   * @param {Object} options The Warning parameters.
    * @constructor
    */
 
@@ -798,15 +798,17 @@ class OAuthWarning {
   }
 }
 
-class OAuthError {
+class OAuthError extends Error {
   /**
    * Creates and throws a new OAuth Error.
    * 
-   * @param {Object} options The warning parameters.
+   * @param {Object} options The Error parameters.
    * @constructor
    */
 
   constructor(options) {
+    super(options);
+
     this.message = `${chalk.red(options.fatal ? "FATAL ERR!" : "ERR!")} ${options.message} - ${chalk.yellow(`${options.code} ${this.codeStatuses[options.code] || ""}`)}`;
     this.fatal = options.fatal;
     
@@ -823,7 +825,11 @@ class OAuthError {
   }
 
   throw() {
+    let stack = this.stack.split("\n").slice(1); stack[1] = chalk.gray(stack[1]);
+
     console.log(this.message);
+    console.log(stack.join("\n"));
+
     if (this.fatal) process.exit();
   }
 }
