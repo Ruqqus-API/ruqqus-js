@@ -248,6 +248,9 @@ Downvotes the post.
 ### `Post.removeVote()`
 Removes the client's vote from the post.
 
+### `Post.delete()`
+Deletes the post.
+
 ### `Comment.reply(body)`
 Submits a reply to the comment.
 
@@ -263,6 +266,9 @@ Downvotes the comment.
 
 ### `Comment.removeVote()`
 Removes the client's vote from the comment.
+
+### `Comment.delete()`
+Deletes the comment.
 
 ### `User.fetchPosts(sort, limit, page)`
 Fetches an array of post objects from the user.

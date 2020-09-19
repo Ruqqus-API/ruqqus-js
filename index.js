@@ -441,7 +441,7 @@ class Post {
    */
 
   upvote() {
-    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`)
+    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
     needle("POST", `https://ruqqus.com/api/v1/vote/post/${this.id}/1`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
   }
   
@@ -450,7 +450,7 @@ class Post {
    */
 
   downvote() {
-    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`)
+    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
     needle("POST", `https://ruqqus.com/api/v1/vote/post/${this.id}/-1`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
   }
 
@@ -459,8 +459,20 @@ class Post {
    */
 
   removeVote() {
-    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`)
+    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
     needle("POST", `https://ruqqus.com/api/v1/vote/post/${this.id}/0`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+  }
+
+  /**
+   * Deletes the post.
+   */
+
+  delete() {
+    if (!scopes.delete) return console.log(`${chalk.red("ERR!")} Missing "Delete" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    needle("POST", `https://ruqqus.com/api/v1/delete_post/${this.id}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
+      .then((resp) => {
+        if (resp.body.error) return console.log(`${chalk.red("ERR!")} Post Deletion Failed - ${chalk.yellow("403 FORBIDDEN")}`);
+      });
   }
 }
 
@@ -533,7 +545,7 @@ class Comment {
    */
 
   upvote() {
-    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`)
+    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
     needle("POST", `https://ruqqus.com/api/v1/vote/comment/${this.id}/1`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
   }
 
@@ -542,7 +554,7 @@ class Comment {
    */
 
   downvote() {
-    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`)
+    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
     needle("POST", `https://ruqqus.com/api/v1/vote/comment/${this.id}/-1`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
   }
 
@@ -551,8 +563,20 @@ class Comment {
    */
 
   removeVote() {
-    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`)
+    if (!scopes.vote) return console.log(`${chalk.red("ERR!")} Missing "Vote" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
     needle("POST", `https://ruqqus.com/api/v1/vote/comment/${this.id}/0`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+  }
+
+  /**
+   * Deletes the comment.
+   */
+
+  delete() {
+    if (!scopes.delete) return console.log(`${chalk.red("ERR!")} Missing "Delete" Scope - ${chalk.yellow("401 NOT_AUTHORIZED")}`);
+    needle("POST", `https://ruqqus.com/api/v1/delete/comment/${this.id}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
+      .then((resp) => {
+        if (resp.body.error) return console.log(`${chalk.red("ERR!")} Comment Deletion Failed - ${chalk.yellow("403 FORBIDDEN")}`);
+      });
   }
 }
 
