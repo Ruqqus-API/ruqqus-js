@@ -12,7 +12,7 @@ If you do not already have an authorized Ruqqus Application, check step one on t
 
 All API endpoints require an Access Token. This Access Token expires every hour; fortunately, the OAuth2 grant also comes with a Refresh Token. All of this is taken care of automatically. The OAuth2 grant checks for an authentication code before providing the Access Token.
 
-Once again, you can learn how to acquire the authorization code by following steps two and three on the help page, linked above. Additional info can be found in the Bot Development section of the [Unofficial Ruqqus API Guide](https://drive.google.com/file/d/1ym_SeMsRJGzGFoWOX8SK798WUye7y0hg/view?usp=sharing).
+Once again, you can learn how to acquire the authorization code by following steps two and three on the help page, linked above. Additional info can be found in the Bot Development section of the [Unofficial Ruqqus API Guide](https://drive.google.com/file/d/1dFzkVxidCHpvnUUTaYtLu6Cu7Wh0oeni/view).
 
 
 ## Example
@@ -70,7 +70,7 @@ Creates a new Ruqqus Client instance.
   - `token` (String): The Application secret
   - `code` (String): The one-time use authorization code
   - `agent` (String): Optional custom `user_agent`
-  - `refresh` (String): Optional refresh token (overrides authorization code)
+  - `refresh` (String): Optional refresh token. Overrides authorization code
 
 ### `Client.guilds.get(name)`
 Gets a guild with the specified name.
@@ -312,7 +312,7 @@ Creates and throws a new OAuth Error.
 - **Object** `options`: An object containing the following fields:
   - `message` (String): The Error message
   - `code` (Number): The Error code. Status messages are handled automatically
-  - `fatal` (Boolean): Whether or not the Error should be treated as fatal. Will exit the process if set to `true`
+  - `fatal` (Boolean): Whether or not the Error should be treated as fatal
 
 ## Contributing
 

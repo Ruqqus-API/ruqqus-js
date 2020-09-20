@@ -9,7 +9,12 @@ class Client extends EventEmitter {
   /**
    * Creates a new ruqqus-js Client instance.
    * 
-   * @param {Object} options The application parameters, including the authorization code.
+   * @param {Object} options The Application parameters, including the authorization code.
+   * @param {String} options.id The Application ID. 
+   * @param {String} options.token The Application secret.
+   * @param {String} options.code The one-time use authorization code.
+   * @param {String} [options.agent] Custom `user_agent`.
+   * @param {String} [options.refresh] Refresh token. Overrides authorization code.
    * @constructor
    */
 
@@ -62,16 +67,9 @@ class Client extends EventEmitter {
           });
         }
 
-        if (resp.body.scopes) {
-          resp.body.scopes.split(",").forEach(s => {
-            scopes[s] = true;
-          });
-
-          if (!scopes.read) new OAuthWarning({
-            message: 'Missing "Read" Scope',
-            warning: "Post and Comment events will not be emitted!"
-          });
-        }
+        resp.body.scopes.split(",").forEach(s => {
+          scopes[s] = true;
+        });
 
         if (resp.body.refresh_token) refreshKeys.refresh_token = resp.body.refresh_token;
         refreshKeys.access_token = resp.body.access_token;
@@ -81,13 +79,20 @@ class Client extends EventEmitter {
         setTimeout(() => { this._refreshToken() }, refreshIn);
 
         if (!this.online) {
-          if (scopes.identity) this.user.data = await this._fetchIdentity(); else {
+          if (scopes.identity) {
+            this.user.data = await this._fetchIdentity(); 
+          } else {
             this.user.data = undefined;
             new OAuthWarning({
               message: 'Missing "Identity" Scope',
               warning: "Client user data will be undefined!"
             });
           }
+
+          if (!scopes.read) new OAuthWarning({
+            message: 'Missing "Read" Scope',
+            warning: "Post and Comment events will not be emitted!"
+          });
 
           this.emit("login");
           this.online = true;
@@ -168,6 +173,7 @@ class Client extends EventEmitter {
      * 
      * @param {String} name The guild name.
      * @returns {Object} The guild data.
+     * @async
      */
 
     async fetchData(name) {
@@ -184,6 +190,7 @@ class Client extends EventEmitter {
      * 
      * @param {String} name The guild name.
      * @returns {Boolean}
+     * @async
      */
 
     async isAvailable(name) {
@@ -211,6 +218,7 @@ class Client extends EventEmitter {
      * 
      * @param {String} id The post ID.
      * @returns {Object} The post data.
+     * @async
      */
 
     async fetchData(id) {
@@ -240,6 +248,7 @@ class Client extends EventEmitter {
      * 
      * @param {String} id The comment ID. 
      * @returns {Object} The post data.
+     * @async
      */
 
     async fetchData(id) {
@@ -269,6 +278,7 @@ class Client extends EventEmitter {
      * 
      * @param {String} username The user's name.
      * @returns {Object} The user data.
+     * @async
      */
 
     async fetchData(username) {
@@ -285,6 +295,7 @@ class Client extends EventEmitter {
      * 
      * @param {String} username The user's name.
      * @returns {Boolean}
+     * @async
      */
     
     async isAvailable(username) {
@@ -343,22 +354,34 @@ class Guild {
       message: 'Missing "Create" Scope',
       code: 401
     });
-    if (!title || title == " ") return console.log(`${chalk.red("ERR!")} No Post Title Provided!`);
-    if (!body || body == " ") return console.log(`${chalk.red("ERR!")} No Post Body Provided!`);
+
+    if (!title || title == " ") return new OAuthError({
+      message: "No Post Title Provided!",
+      code: 405
+    });
+
+    if (!body || body == " ") return new OAuthError({
+      message: "No Post Body Provided!",
+      code: 405
+    });
 
     needle("POST", `https://ruqqus.com/api/v1/submit`, { board: this.name, title: title, body: body }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
       .then((resp) => {
-        if (!resp.body.guild_name == "general") console.log(`${chalk.red("ERR!")} Invalid Guild Name. Post Sent to +general - ${chalk.yellow("404 NOT_FOUND")}`);
+        if (!resp.body.guild_name == "general" && this.name.toLowerCase() != "general") new OAuthWarning({
+          message: "Invalid Guild Name",
+          warning: "Post submitted to to +general!"
+        });
       });
   }
 
   /**
    * Fetches an array of post objects from the guild.
    * 
-   * @param {String} sort The post sorting method. Defaults to "new".
-   * @param {Number} limit The amount of post objects to return. Defaults to 24.
-   * @param {Number} page The page index to fetch posts from. Defaults to 1.
+   * @param {String} [sort=new] The post sorting method.
+   * @param {Number} [limit=24] The amount of post objects to return.
+   * @param {Number} [page=1] The page index to fetch posts from.
    * @returns {Array} The post objects.
+   * @async
    */
 
   async fetchPosts(sort, limit, page) {
@@ -382,9 +405,10 @@ class Guild {
   /**
    * Fetches an array of comment objects from the guild.
    * 
-   * @param {Number} limit The amount of comment objects to return. Defaults to 24.
-   * @param {Number} page The page index to fetch comments from. Defaults to 1.
+   * @param {Number} [limit=24] The amount of comment objects to return.
+   * @param {Number} [page=1] The page index to fetch comments from.
    * @returns {Array} The comment objects.
+   * @async
    */
 
   async fetchComments(sort, limit, page) {
@@ -476,6 +500,11 @@ class Post {
       code: 401
     });
 
+    if (!body || body == " ") return new OAuthError({
+      message: "No Post Body Provided!",
+      code: 405
+    });
+
     needle("POST", "https://ruqqus.com/api/v1/comment", { parent_fullname: `t2_${this.id}`, body: body }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
   }
 
@@ -530,7 +559,7 @@ class Post {
 
     needle("POST", `https://ruqqus.com/api/v1/delete_post/${this.id}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
       .then((resp) => {
-        if (resp.body.error) return new OAuthError({
+        if (resp.body.error) new OAuthError({
           message: "Post Deletion Failed",
           code: 403
         });
@@ -603,6 +632,11 @@ class Comment {
       code: 401
     });
 
+    if (!body || body == " ") return new OAuthError({
+      message: "No Post Body Provided!",
+      code: 405
+    });
+
     needle("POST", "https://ruqqus.com/api/v1/comment", { parent_fullname: `t3_${this.id}`, body: body }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
   }
 
@@ -657,8 +691,8 @@ class Comment {
 
     needle("POST", `https://ruqqus.com/api/v1/delete/comment/${this.id}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
       .then((resp) => {
-        if (resp.body.error) return new OAuthError({
-          message: "Post Deletion Failed",
+        if (resp.body.error) new OAuthError({
+          message: "Comment Deletion Failed",
           code: 403
         });
       });
@@ -728,10 +762,11 @@ class User {
   /**
    * Fetches an array of post objects from the user.
    * 
-   * @param {String} sort The post sorting method. Defaults to "new".
-   * @param {Number} limit The amount of post objects to return. Defaults to 24.
-   * @param {Number} page The page index to fetch posts from. Defaults to 1.
+   * @param {String} [sort=new] The post sorting method.
+   * @param {Number} [limit=24] The amount of post objects to return.
+   * @param {Number} [page=1] The page index to fetch posts from.
    * @returns {Array} The post objects.
+   * @async
    */
 
   async fetchPosts(sort, limit, page) {
@@ -755,9 +790,10 @@ class User {
   /**
    * Fetches an array of comment objects from the user.
    * 
-   * @param {Number} limit The amount of comment objects to return. Defaults to 24.
-   * @param {Number} page The page index to fetch comments from. Defaults to 1.
+   * @param {Number} [limit=24] The amount of comment objects to return.
+   * @param {Number} [page=1] The page index to fetch comments from.
    * @returns {Array} The comment objects.
+   * @async
    */
 
   async fetchComments(limit, page) {
@@ -784,16 +820,18 @@ class OAuthWarning {
    * Creates and throws a new OAuth Warning.
    * 
    * @param {Object} options The Warning parameters.
+   * @param {String} options.message The Warning message.
+   * @param {String} options.warning The Warning consequence.
    * @constructor
    */
 
   constructor(options) {
     this.message = `${chalk.yellow("WARN!")} ${options.message} - ${chalk.yellow(options.warning || "")}`
 
-    this.throw();
+    this._throw();
   }
 
-  throw() {
+  _throw() {
     console.log(this.message);
   }
 }
@@ -803,6 +841,9 @@ class OAuthError extends Error {
    * Creates and throws a new OAuth Error.
    * 
    * @param {Object} options The Error parameters.
+   * @param {String} options.message The Error message.
+   * @param {Number} options.code The Error code. Status messages are handled automatically.
+   * @param {Boolean} options.fatal Whether or not the Error should be treated as fatal.
    * @constructor
    */
 
