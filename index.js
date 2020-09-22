@@ -177,10 +177,12 @@ class Client extends EventEmitter {
      */
 
     async fetchData(name) {
-      if (!scopes.read) return new OAuthError({
-        message: 'Missing "Read" Scope',
-        code: 401
-      });
+      if (!scopes.read) {
+        new OAuthError({
+          message: 'Missing "Read" Scope',
+          code: 401
+        }); return;
+      }
 
       return await new Guild(name)._fetchData();
     },
@@ -222,10 +224,12 @@ class Client extends EventEmitter {
      */
 
     async fetchData(id) {
-      if (!scopes.read) return new OAuthError({
-        message: 'Missing "Read" Scope',
-        code: 401
-      });
+      if (!scopes.read) {
+        new OAuthError({
+          message: 'Missing "Read" Scope',
+          code: 401
+        }); return;
+      }
 
       return await new Post(id)._fetchData();
     }
@@ -252,10 +256,12 @@ class Client extends EventEmitter {
      */
 
     async fetchData(id) {
-      if (!scopes.read) return new OAuthError({
-        message: 'Missing "Read" Scope',
-        code: 401
-      });
+      if (!scopes.read) {
+        new OAuthError({
+          message: 'Missing "Read" Scope',
+          code: 401
+        }); return;
+      }
 
       return await new Comment(id)._fetchData();
     }
@@ -282,10 +288,12 @@ class Client extends EventEmitter {
      */
 
     async fetchData(username) {
-      if (!scopes.read) return new OAuthError({
-        message: 'Missing "Read" Scope',
-        code: 401
-      });
+      if (!scopes.read) {
+        new OAuthError({
+          message: 'Missing "Read" Scope',
+          code: 401
+        }); return;
+      }
 
       return await new User(username)._fetchData();
     },
@@ -385,10 +393,12 @@ class Guild {
    */
 
   async fetchPosts(sort, limit, page) {
-    if (!scopes.read) return new OAuthError({
-      message: 'Missing "Read" Scope',
-      code: 401
-    });
+    if (!scopes.read) {
+      new OAuthError({
+        message: 'Missing "Read" Scope',
+        code: 401
+      }); return;
+    }
 
     let posts = [];
 
@@ -412,10 +422,12 @@ class Guild {
    */
 
   async fetchComments(sort, limit, page) {
-    if (!scopes.read) return new OAuthError({
-      message: 'Missing "Read" Scope',
-      code: 401
-    });
+    if (!scopes.read) {
+      new OAuthError({
+        message: 'Missing "Read" Scope',
+        code: 401
+      }); return;
+    }
 
     let comments = [];
 
@@ -770,10 +782,12 @@ class User {
    */
 
   async fetchPosts(sort, limit, page) {
-    if (!scopes.read) return new OAuthError({
-      message: 'Missing "Read" Scope',
-      code: 401
-    });
+    if (!scopes.read) {
+      new OAuthError({
+        message: 'Missing "Read" Scope',
+        code: 401
+      }); return;
+    }
 
     let posts = [];
 
@@ -797,10 +811,12 @@ class User {
    */
 
   async fetchComments(limit, page) {
-    if (!scopes.read) return new OAuthError({
-      message: 'Missing "Read" Scope',
-      code: 401
-    });
+    if (!scopes.read) {
+      new OAuthError({
+        message: 'Missing "Read" Scope',
+        code: 401
+      }); return;
+    }
 
     let comments = [];
 
@@ -828,10 +844,10 @@ class OAuthWarning {
   constructor(options) {
     this.message = `${chalk.yellow("WARN!")} ${options.message} - ${chalk.yellow(options.warning || "")}`
 
-    this._throw();
+    this.throw();
   }
 
-  _throw() {
+  throw() {
     console.log(this.message);
   }
 }
@@ -849,34 +865,74 @@ class OAuthError extends Error {
 
   constructor(options) {
     super(options);
-
-    this.message = `${chalk.red(options.fatal ? "FATAL ERR!" : "ERR!")} ${options.message} - ${chalk.yellow(`${options.code} ${this.codeStatuses[options.code] || ""}`)}`;
-    this.fatal = options.fatal;
     
-    this.throw();
-  }
+    const codeStatuses = {
+      401: "NOT_AUTHORIZED",
+      403: "FORBIDDEN",
+      404: "NOT_FOUND",
+      405: "NOT_ALLOWED",
+      500: "INTERNAL_ERROR",
+      503: "UNAVAILABLE"
+    }
 
-  codeStatuses = {
-    401: "NOT_AUTHORIZED",
-    403: "FORBIDDEN",
-    404: "NOT_FOUND",
-    405: "NOT_ALLOWED",
-    500: "INTERNAL_ERROR",
-    503: "UNAVAILABLE"
+    this.message = `${chalk.red(options.fatal ? "FATAL ERR!" : "ERR!")} ${options.message} - ${chalk.yellow(`${options.code} ${codeStatuses[options.code] || ""}`)}`;
+
+    this.error = options.message;
+    this.code = options.code;
+    this.status = codeStatuses[options.code];
+    this.fatal = options.fatal || false;
+  
+    this.throw();
   }
 
   throw() {
     let stack = this.stack.split("\n").slice(1); 
     stack = stack.map((x, i) => {
       if (i == 0) return x;
+      if (i == 1 && x.trim().startsWith("at Object")) return x;
       return chalk.gray(x);
     });
 
     console.log(this.message);
     console.log(stack.join("\n"));
 
+    this.message = ""; this.stack = "";
+
     if (this.fatal) process.exit();
   }
 }
 
-module.exports = { Client, OAuthWarning, OAuthError }
+/**
+ * Generates a URL for obtaining an authorization code.
+ * 
+ * @param {Object} options The URL parameters.
+ * @param {String} options.id The Application ID.
+ * @param {String} options.redirect The Application redirect URI.
+ * @param {String} [options.state=ruqqus-js] The Application state token.
+ * @param {String[]|String} options.scopes The Application scopes. Either a string of values separated by commas or an array.
+ * @param {Boolean} [options.permanent=true] Whether or not the Application will have permanent access to the account.
+ */
+
+function generateAuthURL(options) {
+  let scopeList = [ "identity", "create", "read", "update", "delete", "vote", "guildmaster" ];
+  let scopes;
+
+  if (Array.isArray(options.scopes)) scopes = options.scopes;
+  else if (typeof options.scopes == "string") scopes = options.scopes.split(",");
+  else {
+    new OAuthError({
+      message: "Invalid Scope Parameter",
+      code: 401
+    }); return;
+  } 
+
+  scopes = scopes.filter(s => scopeList.includes(s)).map(s => {
+    return s.toLowerCase();
+  });
+
+  if (!options.redirect) options.redirect = "undefined";
+
+  return `https://ruqqus.com/oauth/authorize?client_id=${options.id}&redirect_uri=${options.redirect.startsWith("https://") ? options.redirect : `https://${options.redirect}`}&state=${options.state || "ruqqus-js"}&scope=${scopes}${options.permanent ? "&permanent=true" : ""}`;
+}
+
+module.exports = { Client, OAuthWarning, OAuthError, generateAuthURL }
