@@ -34,7 +34,9 @@ class Client extends EventEmitter {
       refresh_token: options.refresh || null
     };
 
+    this.startTime = 0;
     this.online = false,
+
     this.cache = {
       _postCount: 0,
       _commentCount: 0,
@@ -80,7 +82,7 @@ class Client extends EventEmitter {
 
         if (!this.online) {
           if (scopes.identity) {
-            this.user.data = await this._fetchIdentity(); 
+            this.user.data = await this.user.fetchData();
           } else {
             this.user.data = undefined;
             new OAuthWarning({
@@ -96,6 +98,7 @@ class Client extends EventEmitter {
 
           this.emit("login");
           this.online = true;
+          this.startTime = Date.now();
         }
       }).catch(e => console.error(e));
   }
@@ -146,14 +149,40 @@ class Client extends EventEmitter {
     }
   }
 
-  async _fetchIdentity() {
-    let resp = await needle("GET", "https://ruqqus.com/api/v1/identity", {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+  /**
+   * The amount of time that has passed since Client login.
+   * 
+   * @returns {Number} The time, in seconds.
+   */
 
-    return await new User(resp.body.username)._fetchData();
+  uptime() {
+    return Math.floor((Date.now() - this.startTime) / 1000);
   }
 
   user = {
-    data: {}
+    data: {},
+
+    /**
+     * Fetches the data from the Client user.
+     * 
+     * @returns {Object} The user data.
+     * @async
+     */
+
+    async fetchData() {
+      if (!scopes.identity) {
+        new OAuthError({
+          message: 'Missing "Identity" Scope',
+          code: 401
+        }); return;
+      }
+
+      let resp = await needle("GET", "https://ruqqus.com/api/v1/identity", {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+      let data = await new User(resp.body.username)._fetchData();
+
+      this.data = data;
+      return data;
+    }
   }
   
   guilds = {

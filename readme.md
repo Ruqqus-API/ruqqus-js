@@ -199,6 +199,20 @@ Adds an event listener function. When an event is emitted, runs the function.
 ### `Client.user.data`
 The client's user data object.
 
+### `Client.user.fetchData()`
+Fetches the data from the Client user.
+
+#### Return
+
+- **Object** The user data
+
+### `Client.uptime()`
+The amount of time that has passed since Client login.
+
+#### Return
+
+- **Number** The time, in seconds
+
 ### `Guild.post(title, body)`
 Submits a post to the guild.
 
