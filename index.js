@@ -911,9 +911,10 @@ class OAuthError extends Error {
  * @param {String} [options.state=ruqqus-js] The Application state token.
  * @param {String[]|String} options.scopes The Application scopes. Either a string of values separated by commas or an array.
  * @param {Boolean} [options.permanent=true] Whether or not the Application will have permanent access to the account.
+ * @returns {String} The generated URL.
  */
 
-function generateAuthURL(options) {
+function getAuthURL(options) {
   let scopeList = [ "identity", "create", "read", "update", "delete", "vote", "guildmaster" ];
   let scopes;
 
@@ -935,4 +936,4 @@ function generateAuthURL(options) {
   return `https://ruqqus.com/oauth/authorize?client_id=${options.id}&redirect_uri=${options.redirect.startsWith("https://") ? options.redirect : `https://${options.redirect}`}&state=${options.state || "ruqqus-js"}&scope=${scopes}${options.permanent ? "&permanent=true" : ""}`;
 }
 
-module.exports = { Client, OAuthWarning, OAuthError, generateAuthURL }
+module.exports = { Client, OAuthWarning, OAuthError, getAuthURL }

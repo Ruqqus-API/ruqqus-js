@@ -314,9 +314,29 @@ Creates and throws a new OAuth Error.
   - `code` (Number): The Error code. Status messages are handled automatically
   - `fatal` (Boolean): Whether or not the Error should be treated as fatal
 
+#### Return
+
+- **Object** The Error object
+
+### `getAuthURL(options)`
+Generates a URL for obtaining an authorization code.
+
+#### Parameters
+
+- **Object** `options`: An object containing the following fields:
+  - `id` (String): The Application ID
+  - `redirect` (String): The Application redirect URI
+  - `state` (String): The Application state token
+  - `scopes` (Array|String): The Application scopes. Either a string of values separated by commas or an array
+  - `permanent` (Boolean): Whether or not the Application will have permanent access to the account
+
+#### Return
+
+- **String** The generated URL
+
 ## Contributing
 
-If you find any issues/bugs with this package, feel free to open a Pull Request at the [Github repository](https://github.com/acikek/ruqqus-js). If you'd rather not, you can always talk to me on the [official Ruqqus Discord server](https://ruqqus.com/discord) or add me at **acikek#1169**.
+If you find any issues/bugs with this package, feel free to open a Pull Request at the [Github repository](https://github.com/acikek/ruqqus-js). If you'd rather not, you can always talk to me on the [official Ruqqus Discord server](https://ruqqus.com/discord) or add me at **acikek#8472**.
 
 
 ## License
