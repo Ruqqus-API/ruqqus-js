@@ -1,9 +1,20 @@
+/*
+*                                                            d8b                .d8888b.       .d8888b.  
+*                                                            Y8P               d88P  Y88b     d88P  Y88b 
+*                                                                                     888     888    888 
+888d888 888  888  .d88888  .d88888 888  888 .d8888b         8888 .d8888b            .d88P     888    888 
+888P"   888  888 d88" 888 d88" 888 888  888 88K             "888 88K            .od888P"      888    888 
+888     888  888 888  888 888  888 888  888 "Y8888b. 888888  888 "Y8888b.      d88P"          888    888 
+888     Y88b 888 Y88b 888 Y88b 888 Y88b 888      X88         888      X88      888"       d8b Y88b  d88P 
+888      "Y88888  "Y88888  "Y88888  "Y88888  88888P'         888  88888P'      888888888  Y8P  "Y8888P"  
+*                     888      888                           888                                         
+*                     888      888                          d88P                                         
+*                     888      888                        888P"                                          
+*/
+
 const needle = require("needle");
 const chalk = require("chalk");
 const { EventEmitter } = require("events");
-
-let user_agent;
-let fetchKeys = {}, refreshKeys = {}, scopes = {};
 
 class Client extends EventEmitter {
   /**
@@ -21,18 +32,23 @@ class Client extends EventEmitter {
   constructor(options) {
     super();  
 
-    fetchKeys = {
-      client_id: options.id,
-      client_secret: options.token,
-      grant_type: "code",
-      code: options.code,
+    Client.keys = {
+      code: {
+        client_id: options.id,
+        client_secret: options.token,
+        grant_type: "code",
+        code: options.code,
+      },
+      refresh: {
+        client_id: options.id,
+        client_secret: options.token,
+        grant_type: "refresh",
+        refresh_token: options.refresh || null
+      }
     };
-    refreshKeys = {
-      client_id: options.id,
-      client_secret: options.token,
-      grant_type: "refresh",
-      refresh_token: options.refresh || null
-    };
+
+    Client.scopes = {};
+    Client.userAgent = options.agent || `ruqqus-js@${options.id}`;
 
     this.startTime = 0;
     this.online = false,
@@ -44,14 +60,43 @@ class Client extends EventEmitter {
       comments: []
     };
 
-    if (options.agent) user_agent = options.agent; else user_agent = `ruqqus-js@${fetchKeys.client_id}`;
-
     this._refreshToken();
     this._checkEvents();
   }
+
+  /**
+   * Issues a Ruqqus API request.
+   * 
+   * @param {Object} options The request parameters.
+   * @param {String} options.type The request method.
+   * @param {String} options.path The request endpoint.
+   * @param {Object} [options.options={}] Extra request options.
+   * @returns {Object} The request response.
+   */
+  
+  static async APIRequest(options) {
+    let methods = [ "GET", "POST" ];
+    if (!options.type || !options.path || !methods.includes(options.type.toUpperCase())) {
+      new OAuthError({
+        message: "Invalid Request",
+        code: 405
+      }); return;
+    }
+
+    let resp = await needle(options.type, options.path.startsWith("https://ruqqus.com/") ? options.path : `https://ruqqus.com/api/v1/${options.path.toLowerCase()}`, options.options || {}, { user_agent: Client.userAgent, headers: { Authorization: `Bearer ${Client.keys.refresh.access_token}` } });
+
+    if (resp.body.error && resp.body.error.startsWith("405")) {
+      new OAuthError({
+        message: "Method Not Allowed",
+        code: 405
+      }); return;
+    }
+    
+    return resp;
+  }
   
   _refreshToken() {
-    needle("POST", "https://ruqqus.com/oauth/grant", refreshKeys.refresh_token ? refreshKeys : fetchKeys, { user_agent })
+    Client.APIRequest({ type: "POST", path: "https://ruqqus.com/oauth/grant", options: Client.keys.refresh.refresh_token ? Client.keys.refresh : Client.keys.code })
       .then(async (resp) => {
         if (resp.body.oauth_error) {
           let type;
@@ -70,18 +115,18 @@ class Client extends EventEmitter {
         }
 
         resp.body.scopes.split(",").forEach(s => {
-          scopes[s] = true;
+          Client.scopes[s] = true;
         });
 
-        if (resp.body.refresh_token) refreshKeys.refresh_token = resp.body.refresh_token;
-        refreshKeys.access_token = resp.body.access_token;
+        Client.keys.refresh.refresh_token = resp.body.refresh_token || null;
+        Client.keys.refresh.access_token = resp.body.access_token;
         let refreshIn = (resp.body.expires_at - 5) * 1000 - Date.now()
         
         console.log(`${chalk.greenBright("SUCCESS!")} Token Acquired!\nNext refresh in: ${chalk.yellow(`${Math.floor(refreshIn / 1000)} seconds`)} ${chalk.blueBright(`(${new Date((resp.body.expires_at - 10) * 1000).toLocaleTimeString("en-US")})`)}`);
         setTimeout(() => { this._refreshToken() }, refreshIn);
 
         if (!this.online) {
-          if (scopes.identity) {
+          if (Client.scopes.identity) {
             this.user.data = await this.user.fetchData();
           } else {
             this.user.data = undefined;
@@ -91,7 +136,7 @@ class Client extends EventEmitter {
             });
           }
 
-          if (!scopes.read) new OAuthWarning({
+          if (!Client.scopes.read) new OAuthWarning({
             message: 'Missing "Read" Scope',
             warning: "Post and Comment events will not be emitted!"
           });
@@ -107,9 +152,9 @@ class Client extends EventEmitter {
     setTimeout(() => { this._checkEvents() }, 10000);
     
     if (this.eventNames().includes("post")) {
-      if (!scopes.read) return;
+      if (!Client.scopes.read) return;
 
-      needle("GET", "https://ruqqus.com/api/v1/all/listing", { sort: "new" }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
+      Client.APIRequest({ type: "GET", path: "all/listing", options: { sort: "new" } })
         .then((resp) => {
           if (resp.body.error) return;
 
@@ -128,9 +173,9 @@ class Client extends EventEmitter {
     }
 
     if (this.eventNames().includes("comment")) {
-      if (!scopes.read) return;
+      if (!Client.scopes.read) return;
       
-      needle("GET", "https://ruqqus.com/api/v1/front/comments", { sort: "new" }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
+      Client.APIRequest({ type: "GET", path: "front/comments", options: { sort: "new" } })
         .then((resp) => {
           if (resp.body.error) return;
 
@@ -166,18 +211,17 @@ class Client extends EventEmitter {
      * Fetches the data from the Client user.
      * 
      * @returns {Object} The user data.
-     * @async
      */
 
     async fetchData() {
-      if (!scopes.identity) {
+      if (!Client.scopes.identity) {
         new OAuthError({
           message: 'Missing "Identity" Scope',
           code: 401
         }); return;
       }
 
-      let resp = await needle("GET", "https://ruqqus.com/api/v1/identity", {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+      let resp = await Client.APIRequest({ type: "GET", path: "identity" });
       let data = await new User(resp.body.username)._fetchData();
 
       this.data = data;
@@ -202,11 +246,10 @@ class Client extends EventEmitter {
      * 
      * @param {String} name The guild name.
      * @returns {Object} The guild data.
-     * @async
      */
 
     async fetchData(name) {
-      if (!scopes.read) {
+      if (!Client.scopes.read) {
         new OAuthError({
           message: 'Missing "Read" Scope',
           code: 401
@@ -221,12 +264,11 @@ class Client extends EventEmitter {
      * 
      * @param {String} name The guild name.
      * @returns {Boolean}
-     * @async
      */
 
     async isAvailable(name) {
       if (!name) return undefined;
-      let resp = await needle("GET", `https://ruqqus.com/api/v1/board_available/${name}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+      let resp = await Client.APIRequest({ type: "GET", path: `board_available/${name}` });
 
       return resp.body.available;
     }
@@ -249,11 +291,10 @@ class Client extends EventEmitter {
      * 
      * @param {String} id The post ID.
      * @returns {Object} The post data.
-     * @async
      */
 
     async fetchData(id) {
-      if (!scopes.read) {
+      if (!Client.scopes.read) {
         new OAuthError({
           message: 'Missing "Read" Scope',
           code: 401
@@ -281,11 +322,10 @@ class Client extends EventEmitter {
      * 
      * @param {String} id The comment ID. 
      * @returns {Object} The post data.
-     * @async
      */
 
     async fetchData(id) {
-      if (!scopes.read) {
+      if (!Client.scopes.read) {
         new OAuthError({
           message: 'Missing "Read" Scope',
           code: 401
@@ -313,11 +353,10 @@ class Client extends EventEmitter {
      * 
      * @param {String} username The user's name.
      * @returns {Object} The user data.
-     * @async
      */
 
     async fetchData(username) {
-      if (!scopes.read) {
+      if (!Client.scopes.read) {
         new OAuthError({
           message: 'Missing "Read" Scope',
           code: 401
@@ -332,12 +371,11 @@ class Client extends EventEmitter {
      * 
      * @param {String} username The user's name.
      * @returns {Boolean}
-     * @async
      */
     
     async isAvailable(username) {
       if (!username) return undefined;
-      let resp = await needle("GET", `https://ruqqus.com/api/v1/is_available/${username}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+      let resp = await Client.APIRequest({ type: "GET", path: `is_available/${username}` });
 
       return Object.values(resp.body)[0];
     }
@@ -350,7 +388,7 @@ class Guild {
   }
 
   async _fetchData() {
-    let resp = await needle("GET", `https://ruqqus.com/api/v1/guild/${this.name}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    let resp = await Client.APIRequest({ type: "GET", path: `guild/${this.name}` });
 
     if (!resp.body.id) return undefined;
 
@@ -387,7 +425,7 @@ class Guild {
    */
 
   post(title, body) {
-    if (!scopes.create) return new OAuthError({
+    if (!Client.scopes.create) return new OAuthError({
       message: 'Missing "Create" Scope',
       code: 401
     });
@@ -402,7 +440,7 @@ class Guild {
       code: 405
     });
 
-    needle("POST", `https://ruqqus.com/api/v1/submit`, { board: this.name, title: title, body: body }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
+    Client.APIRequest({ type: "POST", path: "submit", options: { board: this.name, title: title, body: body } })
       .then((resp) => {
         if (!resp.body.guild_name == "general" && this.name.toLowerCase() != "general") new OAuthWarning({
           message: "Invalid Guild Name",
@@ -418,11 +456,10 @@ class Guild {
    * @param {Number} [limit=24] The amount of post objects to return.
    * @param {Number} [page=1] The page index to fetch posts from.
    * @returns {Array} The post objects.
-   * @async
    */
 
   async fetchPosts(sort, limit, page) {
-    if (!scopes.read) {
+    if (!Client.scopes.read) {
       new OAuthError({
         message: 'Missing "Read" Scope',
         code: 401
@@ -430,8 +467,7 @@ class Guild {
     }
 
     let posts = [];
-
-    let resp = await needle("GET", `https://ruqqus.com/api/v1/guild/${this.name}/listing`, { sort: sort || "new", page: page || 1 }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    let resp = await Client.APIRequest({ type: "GET", path: `guild/${this.name}/listing`, options: { sort: sort || "new", page: page || 1 } });
     if (limit) resp.body.data.splice(limit, resp.body.data.length - limit);
     
     for await (let post of resp.body.data) {
@@ -447,11 +483,10 @@ class Guild {
    * @param {Number} [limit=24] The amount of comment objects to return.
    * @param {Number} [page=1] The page index to fetch comments from.
    * @returns {Array} The comment objects.
-   * @async
    */
 
-  async fetchComments(sort, limit, page) {
-    if (!scopes.read) {
+  async fetchComments(limit, page) {
+    if (!Client.scopes.read) {
       new OAuthError({
         message: 'Missing "Read" Scope',
         code: 401
@@ -460,7 +495,7 @@ class Guild {
 
     let comments = [];
 
-    let resp = await needle("GET", `https://ruqqus.com/api/v1/guild/${this.name}/comments`, { page: page || 1 }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    let resp = await Client.APIRequest({ type: "GET", path: `guild/${this.name}/comments`, options: { page: page || 1 } });
     if (limit) resp.body.data.splice(limit, resp.body.data.length - limit);
     
     for await (let comment of resp.body.data) {
@@ -477,7 +512,7 @@ class Post {
   }
   
   async _fetchData() {
-    let resp = await needle("GET", `https://ruqqus.com/api/v1/post/${this.id}`, { sort: "top" }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    let resp = await Client.APIRequest({ type: "GET", path: `post/${this.id}`, options: { sort: "top" } });
 
     if (!resp.body.id) return undefined;
 
@@ -536,7 +571,7 @@ class Post {
    */
 
   comment(body) {
-    if (!scopes.create) return new OAuthError({
+    if (!Client.scopes.create) return new OAuthError({
       message: 'Missing "Create" Scope',
       code: 401
     });
@@ -546,7 +581,7 @@ class Post {
       code: 405
     });
 
-    needle("POST", "https://ruqqus.com/api/v1/comment", { parent_fullname: `t2_${this.id}`, body: body }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    Client.APIRequest({ type: "POST", path: "comment", options: { parent_fullname: `t2_${this.id}`, body: body } });
   }
 
   /**
@@ -554,12 +589,12 @@ class Post {
    */
 
   upvote() {
-    if (!scopes.vote) return new OAuthError({
+    if (!Client.scopes.vote) return new OAuthError({
       message: 'Missing "Vote" Scope',
       code: 401
     });
 
-    needle("POST", `https://ruqqus.com/api/v1/vote/post/${this.id}/1`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    Client.APIRequest({ type: "POST", path: `vote/post/${this.id}/1` });
   }
   
   /**
@@ -567,12 +602,12 @@ class Post {
    */
 
   downvote() {
-    if (!scopes.vote) return new OAuthError({
+    if (!Client.scopes.vote) return new OAuthError({
       message: 'Missing "Vote" Scope',
       code: 401
     });
 
-    needle("POST", `https://ruqqus.com/api/v1/vote/post/${this.id}/-1`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    Client.APIRequest({ type: "POST", path: `vote/post/${this.id}/-1` });
   }
 
   /**
@@ -580,12 +615,12 @@ class Post {
    */
 
   removeVote() {
-    if (!scopes.vote) return new OAuthError({
+    if (!Client.scopes.vote) return new OAuthError({
       message: 'Missing "Vote" Scope',
       code: 401
     });
 
-    needle("POST", `https://ruqqus.com/api/v1/vote/post/${this.id}/0`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    Client.APIRequest({ type: "POST", path: `vote/post/${this.id}/0` });
   }
 
   /**
@@ -593,12 +628,12 @@ class Post {
    */
 
   delete() {
-    if (!scopes.delete) return new OAuthError({
+    if (!Client.scopes.delete) return new OAuthError({
       message: 'Missing "Delete" Scope',
-      code: 401
+      code: 401 
     });
-
-    needle("POST", `https://ruqqus.com/api/v1/delete_post/${this.id}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
+    
+    Client.APIRequest({ type: "POST", path: `delete_post/${this.id}` })
       .then((resp) => {
         if (resp.body.error) new OAuthError({
           message: "Post Deletion Failed",
@@ -614,7 +649,7 @@ class Comment {
   }
 
   async _fetchData() {
-    let resp = await needle("GET", `https://ruqqus.com/api/v1/comment/${this.id}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    let resp = await Client.APIRequest({ type: "GET", path: `comment/${this.id}` });
 
     if (!resp.body.id) return undefined;
     
@@ -668,7 +703,7 @@ class Comment {
    */
 
   reply(body) {
-    if (!scopes.create) return new OAuthError({
+    if (!Client.scopes.create) return new OAuthError({
       message: 'Missing "Create" Scope',
       code: 401
     });
@@ -678,7 +713,7 @@ class Comment {
       code: 405
     });
 
-    needle("POST", "https://ruqqus.com/api/v1/comment", { parent_fullname: `t3_${this.id}`, body: body }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    Client.APIRequest({ type: "POST", path: "comment", options: { parent_fullname: `t3_${this.id}`, body: body } });
   }
 
   /**
@@ -686,12 +721,12 @@ class Comment {
    */
 
   upvote() {
-    if (!scopes.vote) return new OAuthError({
+    if (!Client.scopes.vote) return new OAuthError({
       message: 'Missing "Vote" Scope',
       code: 401
     });
-
-    needle("POST", `https://ruqqus.com/api/v1/vote/comment/${this.id}/1`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    
+    Client.APIRequest({ type: "POST", path: `vote/comment/${this.id}/1` });
   }
 
   /** 
@@ -699,12 +734,12 @@ class Comment {
    */
 
   downvote() {
-    if (!scopes.vote) return new OAuthError({
+    if (!Client.scopes.vote) return new OAuthError({
       message: 'Missing "Vote" Scope',
       code: 401
     });
 
-    needle("POST", `https://ruqqus.com/api/v1/vote/comment/${this.id}/-1`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    Client.APIRequest({ type: "POST", path: `vote/comment/${this.id}/-1` });
   }
 
   /**
@@ -712,12 +747,12 @@ class Comment {
    */
 
   removeVote() {
-    if (!scopes.vote) return new OAuthError({
+    if (!Client.scopes.vote) return new OAuthError({
       message: 'Missing "Vote" Scope',
       code: 401
     });
     
-    needle("POST", `https://ruqqus.com/api/v1/vote/comment/${this.id}/0`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    Client.APIRequest({ type: "POST", path: `vote/comment/${this.id}/0` });
   }
 
   /**
@@ -725,12 +760,12 @@ class Comment {
    */
 
   delete() {
-    if (!scopes.delete) return new OAuthError({
+    if (!Client.scopes.delete) return new OAuthError({
       message: 'Missing "Delete" Scope',
       code: 401
     });
 
-    needle("POST", `https://ruqqus.com/api/v1/delete/comment/${this.id}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } })
+    Client.APIRequest({ type: "POST", path: `delete/comment/${this.id}` })
       .then((resp) => {
         if (resp.body.error) new OAuthError({
           message: "Comment Deletion Failed",
@@ -746,7 +781,7 @@ class User {
   }
 
   async _fetchData() {
-    let resp = await needle("GET", `https://ruqqus.com/api/v1/user/${this.username}`, {}, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}` });
 
     if (!resp.body.id) return undefined;
 
@@ -807,11 +842,10 @@ class User {
    * @param {Number} [limit=24] The amount of post objects to return.
    * @param {Number} [page=1] The page index to fetch posts from.
    * @returns {Array} The post objects.
-   * @async
    */
 
   async fetchPosts(sort, limit, page) {
-    if (!scopes.read) {
+    if (!Client.scopes.read) {
       new OAuthError({
         message: 'Missing "Read" Scope',
         code: 401
@@ -819,8 +853,8 @@ class User {
     }
 
     let posts = [];
-
-    let resp = await needle("GET", `https://ruqqus.com/api/v1/user/${this.username}/listing`, { sort: sort || "new", page: page || 1 }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    
+    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/listing`, options: { sort: sort || "new", page: page || 1 } });
     if (limit) resp.body.data.splice(limit, resp.body.data.length - limit);
     
     for await (let post of resp.body.data) {
@@ -836,11 +870,10 @@ class User {
    * @param {Number} [limit=24] The amount of comment objects to return.
    * @param {Number} [page=1] The page index to fetch comments from.
    * @returns {Array} The comment objects.
-   * @async
    */
 
   async fetchComments(limit, page) {
-    if (!scopes.read) {
+    if (!Client.scopes.read) {
       new OAuthError({
         message: 'Missing "Read" Scope',
         code: 401
@@ -849,7 +882,7 @@ class User {
 
     let comments = [];
 
-    let resp = await needle("GET", `https://ruqqus.com/api/v1/user/${this.username}/comments`, { page: page || 1 }, { user_agent, headers: { Authorization: `Bearer ${refreshKeys.access_token}` } });
+    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/comments`, options: { page: page || 1 } });
     if (limit) resp.body.data.splice(limit, resp.body.data.length - limit);
     
     for await (let comment of resp.body.data) {

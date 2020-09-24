@@ -209,6 +209,20 @@ Fetches the data from the Client user.
 ### `Client.uptime()`
 The amount of time that has passed since Client login.
 
+### `Client.APIRequest(options)`
+Issues a Ruqqus API request. *Static method*
+
+#### Parameters
+
+- **Object** `options`: An object containing the following fields:
+  - `type` (String): The request method
+  - `path` (String): The request endpoint
+  - `options` (Object): Optional extra request options
+
+#### Return
+
+- **Object** The request response
+
 #### Return
 
 - **Number** The time, in seconds
@@ -350,7 +364,7 @@ Generates a URL for obtaining an authorization code.
 
 ## Contributing
 
-If you find any issues/bugs with this package, feel free to open a Pull Request at the [Github repository](https://github.com/acikek/ruqqus-js). If you'd rather not, you can always talk to me on the [official Ruqqus Discord server](https://ruqqus.com/discord) or add me at **acikek#8472**.
+If you find any issues/bugs with this package, feel free to open a Pull Request at the [Github repository](https://github.com/acikek/ruqqus-js). If you'd rather not, you can always talk to me on the [official Ruqqus Discord server](https://ruqqus.com/discord), the [unofficial Ruqqus API Discord server](https://discord.gg/GWRutXB), or just add me at **acikek#8472**.
 
 
 ## License
