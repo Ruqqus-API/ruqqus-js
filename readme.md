@@ -221,7 +221,7 @@ Issues a Ruqqus API request. *Static method*
 
 #### Return
 
-- **Object** The request response
+- **Object** The request response body
 
 #### Return
 

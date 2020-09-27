@@ -54,10 +54,10 @@ class Client extends EventEmitter {
     this.online = false,
 
     this.cache = {
-      _postCount: 0,
-      _commentCount: 0,
+      count: 0,
       posts: [],
-      comments: []
+      comments: [],
+      guilds: []
     };
 
     this._refreshToken();
@@ -71,7 +71,7 @@ class Client extends EventEmitter {
    * @param {String} options.type The request method.
    * @param {String} options.path The request endpoint.
    * @param {Object} [options.options={}] Extra request options.
-   * @returns {Object} The request response.
+   * @returns {Object} The request response body.
    */
   
   static async APIRequest(options) {
@@ -92,18 +92,18 @@ class Client extends EventEmitter {
       }); return;
     }
     
-    return resp;
+    return resp.body;
   }
   
   _refreshToken() {
     Client.APIRequest({ type: "POST", path: "https://ruqqus.com/oauth/grant", options: Client.keys.refresh.refresh_token ? Client.keys.refresh : Client.keys.code })
       .then(async (resp) => {
-        if (resp.body.oauth_error) {
+        if (resp.oauth_error) {
           let type;
 
-          if (resp.body.oauth_error.startsWith("Invalid refresh_token")) {
+          if (resp.oauth_error.startsWith("Invalid refresh_token")) {
             type = "Refresh Token";
-          } else if (resp.body.oauth_error.startsWith("Invalid code")) {
+          } else if (resp.oauth_error.startsWith("Invalid code")) {
             type = "Authcode";
           }
 
@@ -114,15 +114,15 @@ class Client extends EventEmitter {
           });
         }
 
-        resp.body.scopes.split(",").forEach(s => {
+        resp.scopes.split(",").forEach(s => {
           Client.scopes[s] = true;
         });
 
-        Client.keys.refresh.refresh_token = resp.body.refresh_token || null;
-        Client.keys.refresh.access_token = resp.body.access_token;
-        let refreshIn = (resp.body.expires_at - 5) * 1000 - Date.now()
+        Client.keys.refresh.refresh_token = resp.refresh_token || null;
+        Client.keys.refresh.access_token = resp.access_token;
+        let refreshIn = (resp.expires_at - 5) * 1000 - Date.now()
         
-        console.log(`${chalk.greenBright("SUCCESS!")} Token Acquired!\nNext refresh in: ${chalk.yellow(`${Math.floor(refreshIn / 1000)} seconds`)} ${chalk.blueBright(`(${new Date((resp.body.expires_at - 10) * 1000).toLocaleTimeString("en-US")})`)}`);
+        console.log(`${chalk.greenBright("SUCCESS!")} Token Acquired!\nNext refresh in: ${chalk.yellow(`${Math.floor(refreshIn / 1000)} seconds`)} ${chalk.blueBright(`(${new Date((resp.expires_at - 10) * 1000).toLocaleTimeString("en-US")})`)}`);
         setTimeout(() => { this._refreshToken() }, refreshIn);
 
         if (!this.online) {
@@ -156,19 +156,16 @@ class Client extends EventEmitter {
 
       Client.APIRequest({ type: "GET", path: "all/listing", options: { sort: "new" } })
         .then((resp) => {
-          if (resp.body.error) return;
+          if (resp.error) return;
 
-          resp.body.data.forEach(async (post, i) => {
+          resp.data.forEach(async post => {
             if (this.cache.posts.indexOf(post.id) > -1) return;
             this.cache.posts.push(post.id);
             
-            if (this.cache._postCount != 0) {
-              let postData = await new Post(post.id)._fetchData();
-              this.emit("post", new Post(post.id), postData);
+            if (this.cache.count != 0) {
+              this.emit("post", new Post(post.id), await Post.formatData(post));
             }
           });
-
-          this.cache._postCount++;
         });
     }
 
@@ -177,21 +174,20 @@ class Client extends EventEmitter {
       
       Client.APIRequest({ type: "GET", path: "front/comments", options: { sort: "new" } })
         .then((resp) => {
-          if (resp.body.error) return;
+          if (resp.error) return;
 
-          resp.body.data.forEach(async (comment, i) => {
+          resp.data.forEach(async comment => {
             if (this.cache.comments.indexOf(comment.id) > -1) return;
             this.cache.comments.push(comment.id);
             
-            if (this.cache._commentCount != 0) {
-              let commentData = await new Comment(comment.id)._fetchData();
-              this.emit("comment", new Comment(comment.id), commentData);
+            if (this.cache.count != 0) {
+              this.emit("comment", new Comment(comment.id), await Comment.formatData(comment));
             }
           });
-
-          this.cache._commentCount++;
         });
     }
+
+    this.cache.count++;
   }
 
   /**
@@ -222,7 +218,7 @@ class Client extends EventEmitter {
       }
 
       let resp = await Client.APIRequest({ type: "GET", path: "identity" });
-      let data = await new User(resp.body.username)._fetchData();
+      let data = User.formatData(resp);
 
       this.data = data;
       return data;
@@ -270,7 +266,7 @@ class Client extends EventEmitter {
       if (!name) return undefined;
       let resp = await Client.APIRequest({ type: "GET", path: `board_available/${name}` });
 
-      return resp.body.available;
+      return resp.available;
     }
   }
 
@@ -377,7 +373,7 @@ class Client extends EventEmitter {
       if (!username) return undefined;
       let resp = await Client.APIRequest({ type: "GET", path: `is_available/${username}` });
 
-      return Object.values(resp.body)[0];
+      return Object.values(resp)[0];
     }
   }
 }
@@ -387,34 +383,38 @@ class Guild {
     this.name = name;
   }
 
-  async _fetchData() {
-    let resp = await Client.APIRequest({ type: "GET", path: `guild/${this.name}` });
+  async _fetchData(format) {
+    let resp = format || await Client.APIRequest({ type: "GET", path: `guild/${this.name}` });
 
-    if (!resp.body.id) return undefined;
+    if (!resp.id) return undefined;
 
     return {
-      name: resp.body.name,
+      name: resp.name,
       description: {
-        text: resp.body.description,
-        html: resp.body.description_html
+        text: resp.description,
+        html: resp.description_html
       },
-      color: resp.body.color,
-      id: resp.body.id,
-      full_id: resp.body.fullname,
-      link: resp.body.permalink,
-      full_link: `https://ruqqus.com${resp.body.permalink}`,
-      subscribers: resp.body.subscriber_count,
-      guildmasters: resp.body.mods_count,
-      icon_url: resp.body.profile_url.startsWith("/assets") ? `https://ruqqus.com/${resp.body.profile_url}` : resp.body.profile_url,
-      banner_url: resp.body.banner_url.startsWith("/assets") ? `https://ruqqus.com/${resp.body.banner_url}` : resp.body.banner_url,
-      created_at: resp.body.created_utc,
+      color: resp.color,
+      id: resp.id,
+      full_id: resp.fullname,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      subscribers: resp.subscriber_count,
+      guildmasters: resp.mods_count,
+      icon_url: resp.profile_url.startsWith("/assets") ? `https://ruqqus.com/${resp.profile_url}` : resp.profile_url,
+      banner_url: resp.banner_url.startsWith("/assets") ? `https://ruqqus.com/${resp.banner_url}` : resp.banner_url,
+      created_at: resp.created_utc,
       flags: {
-        banned: resp.body.is_banned,
-        private: resp.body.is_private,
-        restricted: resp.body.is_restricted,
-        age_restricted: resp.body.over_18
+        banned: resp.is_banned,
+        private: resp.is_private,
+        restricted: resp.is_restricted,
+        age_restricted: resp.over_18
       }
     }
+  }
+
+  static formatData(format) {
+    return new Guild()._fetchData(format);
   }
   
   /**
@@ -442,7 +442,7 @@ class Guild {
 
     Client.APIRequest({ type: "POST", path: "submit", options: { board: this.name, title: title, body: body } })
       .then((resp) => {
-        if (!resp.body.guild_name == "general" && this.name.toLowerCase() != "general") new OAuthWarning({
+        if (!resp.guild_name == "general" && this.name.toLowerCase() != "general") new OAuthWarning({
           message: "Invalid Guild Name",
           warning: "Post submitted to to +general!"
         });
@@ -468,10 +468,10 @@ class Guild {
 
     let posts = [];
     let resp = await Client.APIRequest({ type: "GET", path: `guild/${this.name}/listing`, options: { sort: sort || "new", page: page || 1 } });
-    if (limit) resp.body.data.splice(limit, resp.body.data.length - limit);
+    if (limit) resp.data.splice(limit, resp.data.length - limit);
     
-    for await (let post of resp.body.data) {
-      posts.push(await new Post(post.id)._fetchData());
+    for await (let post of resp.data) {
+      posts.push(await Post.formatData(post));
     }
 
     return posts;
@@ -496,10 +496,10 @@ class Guild {
     let comments = [];
 
     let resp = await Client.APIRequest({ type: "GET", path: `guild/${this.name}/comments`, options: { page: page || 1 } });
-    if (limit) resp.body.data.splice(limit, resp.body.data.length - limit);
+    if (limit) resp.data.splice(limit, resp.data.length - limit);
     
-    for await (let comment of resp.body.data) {
-      comments.push(await new Comment(comment.id)._fetchData());
+    for await (let comment of resp.data) {
+      comments.push(await Comment.formatData(comment));
     }
 
     return comments;
@@ -511,57 +511,61 @@ class Post {
     this.id = id;
   }
   
-  async _fetchData() {
-    let resp = await Client.APIRequest({ type: "GET", path: `post/${this.id}`, options: { sort: "top" } });
+  async _fetchData(format) {
+    let resp = format || await Client.APIRequest({ type: "GET", path: `post/${this.id}`, options: { sort: "top" } });
 
-    if (!resp.body.id) return undefined;
+    if (!resp.id) return undefined;
 
     return {
       author: {
-        username: resp.body.author,
-        title: resp.body.author_title ? {
-          name: resp.body.author_title.text.startsWith(",") ? resp.body.author_title.text.split(", ")[1] : resp.body.author_title.text,
-          id: resp.body.author_title.id,
-          kind: resp.body.author_title.kind,
-          color: resp.body.author_title.color
+        username: resp.author,
+        title: resp.author_title ? {
+          name: resp.author_title.text.startsWith(",") ? resp.author_title.text.split(", ")[1] : resp.author_title.text,
+          id: resp.author_title.id,
+          kind: resp.author_title.kind,
+          color: resp.author_title.color
         } : null
       },
       content: {
-        title: resp.body.title,
+        title: resp.title,
         body: {
-          text: resp.body.body,
-          html: resp.body.body_html
+          text: resp.body,
+          html: resp.body_html
         },
-        domain: resp.body.domain,
-        url: resp.body.url,
-        thumbnail: resp.body.thumb_url,
-        embed: resp.body.embed_url
+        domain: resp.domain,
+        url: resp.url,
+        thumbnail: resp.thumb_url,
+        embed: resp.embed_url
       },
       votes: {
-        score: resp.body.score,
-        upvotes: resp.body.upvotes,
-        downvotes: resp.body.downvotes,
-        voted: resp.body.voted
+        score: resp.score,
+        upvotes: resp.upvotes,
+        downvotes: resp.downvotes,
+        voted: resp.voted
       },
-      id: resp.body.id,
-      full_id: resp.body.fullname,
-      link: resp.body.permalink,
-      full_link: `https://ruqqus.com${resp.body.permalink}`,
-      created_at: resp.body.created_utc,
-      edited_at: resp.body.edited_utc,
+      id: resp.id,
+      full_id: resp.fullname,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      created_at: resp.created_utc,
+      edited_at: resp.edited_utc,
       flags: {
-        archived: resp.body.is_archived,
-        banned: resp.body.is_banned,
-        deleted: resp.body.is_deleted,
-        nsfw: resp.body.is_nsfw,
-        nsfl: resp.body.is_nsfl,
-        edited: resp.body.edited_utc > 0
+        archived: resp.is_archived,
+        banned: resp.is_banned,
+        deleted: resp.is_deleted,
+        nsfw: resp.is_nsfw,
+        nsfl: resp.is_nsfl,
+        edited: resp.edited_utc > 0
       },
       guild: {
-        name: resp.body.guild_name,
-        original_name: resp.body.original_guild_name
+        name: resp.guild_name,
+        original_name: resp.original_guild_name
       }
     }
+  }
+
+  static formatData(format) {
+    return new Post()._fetchData(format);
   }
 
   /**
@@ -635,7 +639,7 @@ class Post {
     
     Client.APIRequest({ type: "POST", path: `delete_post/${this.id}` })
       .then((resp) => {
-        if (resp.body.error) new OAuthError({
+        if (resp.error) new OAuthError({
           message: "Post Deletion Failed",
           code: 403
         });
@@ -648,52 +652,56 @@ class Comment {
     this.id = id;
   }
 
-  async _fetchData() {
-    let resp = await Client.APIRequest({ type: "GET", path: `comment/${this.id}` });
+  async _fetchData(format) {
+    let resp = format || await Client.APIRequest({ type: "GET", path: `comment/${this.id}` });
 
-    if (!resp.body.id) return undefined;
+    if (!resp.id) return undefined;
     
     return {
       author: {
-        username: resp.body.author,
-        title: resp.body.title ? {
-          name: resp.body.title.text.startsWith(",") ? resp.body.title.text.split(", ")[1] : resp.body.title.text,
-          id: resp.body.title.id,
-          kind: resp.body.title.kind,
-          color: resp.body.title.color
+        username: resp.author,
+        title: resp.title ? {
+          name: resp.title.text.startsWith(",") ? resp.title.text.split(", ")[1] : resp.title.text,
+          id: resp.title.id,
+          kind: resp.title.kind,
+          color: resp.title.color
         } : null,
       },
       content: {
-        text: resp.body.body,
-        html: resp.body.body_html
+        text: resp.body,
+        html: resp.body_html
       },
       votes: {
-        score: resp.body.score,
-        upvotes: resp.body.upvotes,
-        downvotes: resp.body.downvotes
+        score: resp.score,
+        upvotes: resp.upvotes,
+        downvotes: resp.downvotes
       },
       parent: {
-        post: resp.body.post,
-        comment: resp.body.parent.startsWith("t3") ? resp.body.parent : null
+        post: resp.post,
+        comment: resp.parent.startsWith("t3") ? resp.parent : null
       },
-      id: resp.body.id,
-      full_id: resp.body.fullname,
-      link: resp.body.permalink,
-      full_link: `https://ruqqus.com${resp.body.permalink}`,
-      created_at: resp.body.created_utc,
-      edited_at: resp.body.edited_utc,
-      chain_level: resp.body.level,
+      id: resp.id,
+      full_id: resp.fullname,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      created_at: resp.created_utc,
+      edited_at: resp.edited_utc,
+      chain_level: resp.level,
       flags: {
-        archived: resp.body.is_archived,
-        banned: resp.body.is_banned,
-        deleted: resp.body.is_deleted,
-        nsfw: resp.body.is_nsfw,
-        nsfl: resp.body.is_nsfl,
-        offensive: resp.body.is_offensive,
-        edited: resp.body.edited_utc > 0
+        archived: resp.is_archived,
+        banned: resp.is_banned,
+        deleted: resp.is_deleted,
+        nsfw: resp.is_nsfw,
+        nsfl: resp.is_nsfl,
+        offensive: resp.is_offensive,
+        edited: resp.edited_utc > 0
       },
-      guild: resp.body.guild_name,
+      guild: resp.guild_name,
     }
+  }
+
+  static formatData(format) {
+    return new Comment()._fetchData(format);
   }
 
   /**
@@ -767,7 +775,7 @@ class Comment {
 
     Client.APIRequest({ type: "POST", path: `delete/comment/${this.id}` })
       .then((resp) => {
-        if (resp.body.error) new OAuthError({
+        if (resp.error) new OAuthError({
           message: "Comment Deletion Failed",
           code: 403
         });
@@ -780,51 +788,51 @@ class User {
     this.username = username;
   }
 
-  async _fetchData() {
-    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}` });
+  async _fetchData(format) {
+    let resp = format || await Client.APIRequest({ type: "GET", path: `user/${this.username}` });
 
-    if (!resp.body.id) return undefined;
+    if (!resp.id) return undefined;
 
-    if (resp.body.is_banned) {
+    if (resp.is_banned) {
       return {
-        username: resp.body.username,
-        id: resp.body.id,
-        link: resp.body.permalink,
-        full_link: `https://ruqqus.com${resp.body.permalink}`,
-        ban_reason: resp.body.ban_reason,
+        username: resp.username,
+        id: resp.id,
+        link: resp.permalink,
+        full_link: `https://ruqqus.com${resp.permalink}`,
+        ban_reason: resp.ban_reason,
       }
     }
     
     return {
-      username: resp.body.username,
-      title: resp.body.title ? {
-        name: resp.body.title.text.startsWith(",") ? resp.body.title.text.split(", ")[1] : resp.body.title.text,
-        id: resp.body.title.id,
-        kind: resp.body.title.kind,
-        color: resp.body.title.color
+      username: resp.username,
+      title: resp.title ? {
+        name: resp.title.text.startsWith(",") ? resp.title.text.split(", ")[1] : resp.title.text,
+        id: resp.title.id,
+        kind: resp.title.kind,
+        color: resp.title.color
       } : null,
       bio: {
-        text: resp.body.bio,
-        html: resp.body.bio_html
+        text: resp.bio,
+        html: resp.bio_html
       },
       stats: {
-        posts: resp.body.post_count,
-        post_rep: resp.body.post_rep,
-        comments: resp.body.comment_count,
-        comment_rep: resp.body.comment_rep
+        posts: resp.post_count,
+        post_rep: resp.post_rep,
+        comments: resp.comment_count,
+        comment_rep: resp.comment_rep
       },
-      id: resp.body.id,
-      full_id: `t1_${resp.body.id}`,
-      link: resp.body.permalink,
-      full_link: `https://ruqqus.com${resp.body.permalink}`,
-      avatar_url: resp.body.profile_url.startsWith("/assets") ? `https://ruqqus.com${resp.body.profile_url}` : resp.body.profile_url,
-      banner_url: resp.body.banner_url.startsWith("/assets") ? `https://ruqqus.com${resp.body.banner_url}` : resp.body.banner_url,
-      created_at: resp.body.created_utc,
+      id: resp.id,
+      full_id: `t1_${resp.id}`,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      avatar_url: resp.profile_url.startsWith("/assets") ? `https://ruqqus.com${resp.profile_url}` : resp.profile_url,
+      banner_url: resp.banner_url.startsWith("/assets") ? `https://ruqqus.com${resp.banner_url}` : resp.banner_url,
+      created_at: resp.created_utc,
       flags: {
-        banned: resp.body.is_banned
+        banned: resp.is_banned
       },
       badges: 
-        resp.body.badges.map(b => {
+        resp.badges.map(b => {
           return { 
             name: b.name,
             description: b.text,
@@ -833,6 +841,10 @@ class User {
           }
         }),
     }
+  }
+
+  static formatData(format) {
+    return new User()._fetchData(format);
   }
 
   /**
@@ -855,10 +867,10 @@ class User {
     let posts = [];
     
     let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/listing`, options: { sort: sort || "new", page: page || 1 } });
-    if (limit) resp.body.data.splice(limit, resp.body.data.length - limit);
-    
-    for await (let post of resp.body.data) {
-      posts.push(await new Post(post.id)._fetchData());
+    if (limit) resp.data.splice(limit, resp.data.length - limit);
+
+    for await (let post of resp.data) {
+      posts.push(await Post.formatData(post));
     }
 
     return posts;
@@ -883,10 +895,10 @@ class User {
     let comments = [];
 
     let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/comments`, options: { page: page || 1 } });
-    if (limit) resp.body.data.splice(limit, resp.body.data.length - limit);
+    if (limit) resp.data.splice(limit, resp.data.length - limit);
     
-    for await (let comment of resp.body.data) {
-      comments.push(await new Comment(comment.id)._fetchData());
+    for await (let comment of resp.data) {
+      comments.push(await Comment.formatData(comment));
     }
 
     return comments;
