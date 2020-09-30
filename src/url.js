@@ -68,7 +68,7 @@ function getAuthURLInput() {
         redirect: redirect || "http://localhost", 
         state, 
         scopes: scopes || "identity,create,read,update,delete,vote,guildmaster", 
-        permanent: ["y", "yes"].includes(permanent.toLowerCase() || !permanent) 
+        permanent: ["y", "yes"].includes(permanent.toLowerCase()) || !permanent
       });
       if (generatedURL) console.log(`${chalk.yellow("Generated URL:")} ${generatedURL}\r`);
 
