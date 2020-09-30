@@ -1,3 +1,4 @@
+const { red } = require("chalk");
 const { OAuthError } = require("./classes/error.js");
 
 /**
@@ -37,9 +38,9 @@ function getAuthURL(options) {
     return s.toLowerCase();
   });
 
-  if (!options.redirect) options.redirect = "undefined";
+  if (!options.redirect) options.redirect = "http://localhost";
 
-  return `https://ruqqus.com/oauth/authorize?client_id=${options.id}&redirect_uri=${options.redirect.startsWith("https://") ? options.redirect : `https://${options.redirect}`}&state=${options.state || "ruqqus-js"}&scope=${scopes}${options.permanent ? "&permanent=true" : ""}`;
+  return `https://ruqqus.com/oauth/authorize?client_id=${options.id}&redirect_uri=${options.redirect.startsWith("http") ? options.redirect : `https://${options.redirect}`}&state=${options.state || "ruqqus-js"}&scope=${scopes}${options.permanent ? "&permanent=true" : ""}`;
 }
 
 /**
@@ -56,13 +57,19 @@ function getAuthURLInput() {
 
   console.log("\r");
   rl.question(`${chalk.yellow("Application ID")}: `, id => 
-    rl.question(`${chalk.yellow("Redirect URI")}: `, redirect =>
-    rl.question(`${chalk.yellow("State Token")}: `, state => 
-    rl.question(`${chalk.yellow("Scope List")}: `, scopes => 
-    rl.question(`${chalk.yellow("Permanent (y/n)")}: `, permanent => {
+    rl.question(`${chalk.yellow("Redirect URI (default: http://localhost)")}: `, redirect =>
+    rl.question(`${chalk.yellow("State Token (default: \"\")")}: `, state => 
+    rl.question(`${chalk.yellow("Scope List (default: identity,create,read,update,delete,vote,guildmaster)")}: `, scopes => 
+    rl.question(`${chalk.yellow("Permanent (Y/n) (default: Y)")}: `, permanent => {
       console.log("\r");
 
-      let generatedURL = getAuthURL({ id, redirect, state, scopes, permanent: ["y", "yes"].includes(permanent.toLowerCase()) });
+      let generatedURL = getAuthURL({
+        id, 
+        redirect: redirect || "http://localhost", 
+        state, 
+        scopes: scopes || "identity,create,read,update,delete,vote,guildmaster", 
+        permanent: ["y", "yes"].includes(permanent.toLowerCase() || !permanent) 
+      });
       if (generatedURL) console.log(`${chalk.yellow("Generated URL:")} ${generatedURL}\r`);
 
       process.exit();
