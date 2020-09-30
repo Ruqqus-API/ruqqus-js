@@ -1,4 +1,3 @@
-const { red } = require("chalk");
 const { OAuthError } = require("./classes/error.js");
 
 /**
