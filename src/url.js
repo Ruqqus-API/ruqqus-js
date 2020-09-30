@@ -25,21 +25,29 @@ function getAuthURL(options) {
       }); return;
     }
 
-    scopes = options.scopes.split(",");
+    if (options.scopes == "all") scopes = scopeList;
+    else scopes = options.scopes.split(",");
   } else {
     new OAuthError({
       message: "Invalid Scope Parameter",
       code: 401
     }); return;
-  } 
-
+  }
+  
+  if (!options.id || options.id == " ") {
+    new OAuthError({
+      message: "Invalid ID Parameter",
+      code: 401
+    }); return;
+  }
+  
   scopes = scopes.filter(s => scopeList.includes(s.toLowerCase())).map(s => {
     return s.toLowerCase();
   });
 
-  if (!options.redirect) options.redirect = "undefined";
+  if (!options.redirect || options.redirect == " ") options.redirect = "http://localhost";
 
-  return `https://ruqqus.com/oauth/authorize?client_id=${options.id}&redirect_uri=${options.redirect.startsWith("https://") ? options.redirect : `https://${options.redirect}`}&state=${options.state || "ruqqus-js"}&scope=${scopes}${options.permanent ? "&permanent=true" : ""}`;
+  return `https://ruqqus.com/oauth/authorize?client_id=${options.id}&redirect_uri=${options.redirect.startsWith("http") ? options.redirect : `https://${options.redirect}`}&state=${options.state || "ruqqus-js"}&scope=${scopes}${options.permanent ? "&permanent=true" : ""}`;
 }
 
 /**
@@ -56,13 +64,18 @@ function getAuthURLInput() {
 
   console.log("\r");
   rl.question(`${chalk.yellow("Application ID")}: `, id => 
-    rl.question(`${chalk.yellow("Redirect URI")}: `, redirect =>
+    rl.question(`${chalk.yellow("Redirect URI")}: `, redirect => 
     rl.question(`${chalk.yellow("State Token")}: `, state => 
     rl.question(`${chalk.yellow("Scope List")}: `, scopes => 
     rl.question(`${chalk.yellow("Permanent (y/n)")}: `, permanent => {
       console.log("\r");
 
-      let generatedURL = getAuthURL({ id, redirect, state, scopes, permanent: ["y", "yes"].includes(permanent.toLowerCase()) });
+      let generatedURL = getAuthURL({
+        id, redirect, state, 
+        scopes: scopes || "all", 
+        permanent: ["y", "yes"].includes(permanent.toLowerCase())
+      });
+
       if (generatedURL) console.log(`${chalk.yellow("Generated URL:")} ${generatedURL}\r`);
 
       process.exit();
@@ -70,4 +83,4 @@ function getAuthURLInput() {
   ))));
 }
 
-module.exports = { getAuthURL, getAuthURLInput }
+module.exports = { getAuthURL, getAuthURLInput };
