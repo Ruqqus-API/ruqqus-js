@@ -206,7 +206,7 @@ Fetches the data from the Client user.
 
 - **Object** The user data
 
-### `Client.uptime()`
+### `Client.uptime`
 The amount of time that has passed since Client login.
 
 ### `Client.APIRequest(options)`
@@ -361,6 +361,9 @@ Generates a URL for obtaining an authorization code.
 #### Return
 
 - **String** The generated URL
+
+### `getAuthURLInput()`
+Generates a URL for obtaining an authorization code based on console input. Exits the process upon completion.
 
 ## Contributing
 
