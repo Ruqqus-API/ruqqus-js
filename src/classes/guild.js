@@ -45,9 +45,12 @@ class Guild {
    * 
    * @param {String} title The title of the post.
    * @param {String} body The body of the post. Can include HTML and Markdown.
+   * @param {Object} [options] The post options.
+   * @param {String} [options.url] The post URL.
+   * @param {Boolean} [options.nsfw] Whether or not the post should be marked as NSFW.
    */
 
-  post(title, body) {
+  post(title, body, options) {
     if (!this.client.scopes.create) return new OAuthError({
       message: 'Missing "Create" Scope',
       code: 401
@@ -63,7 +66,7 @@ class Guild {
       code: 405
     });
 
-    this.client.APIRequest({ type: "POST", path: "submit", options: { board: this.name, title: title, body: body } })
+    this.client.APIRequest({ type: "POST", path: "submit", options: { board: this.name, title: title, body: body, url: options.url || "", over_18: options.nsfw } })
       .then((resp) => {
         if (!resp.guild_name == "general" && this.name.toLowerCase() != "general") new OAuthWarning({
           message: "Invalid Guild Name",

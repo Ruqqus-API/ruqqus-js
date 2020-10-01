@@ -227,13 +227,16 @@ Issues a Ruqqus API request. *Static method*
 
 - **Number** The time, in seconds
 
-### `Guild.post(title, body)`
+### `Guild.post(title, body, options)`
 Submits a post to the guild.
 
 #### Parameters
 
 - **String** `title`: The title of the post
 - **String** `body`: The body of the post. Can include HTML and Markdown
+- **Object** `options`: An object containing the following fields:
+  - `url` (String): The post URL
+  - `nsfw` (Boolean): Whether or not the post should be marked as NSFW
 
 ### `Guild.fetchPosts(sort, limit, page)`
 Fetches an array of post objects from the guild.
