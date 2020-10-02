@@ -46,10 +46,10 @@ class Client extends EventEmitter {
     this.online = false,
 
     this.cache = {
-      count: 0,
+      _postCount: 0,
       posts: [],
-      comments: [],
-      guilds: []
+      _commentCount: 0,
+      comments: []
     };
 
     this._refreshToken();
@@ -154,8 +154,9 @@ class Client extends EventEmitter {
             if (this.cache.posts.indexOf(post.id) > -1) return;
             this.cache.posts.push(post.id);
             
-            if (this.cache.count != 0) {
+            if (this.cache._postCount != 0) {
               this.emit("post", new Post(post.id, Client), await Post.formatData(post));
+              this.cache._postCount++;
             }
           });
         });
@@ -172,14 +173,13 @@ class Client extends EventEmitter {
             if (this.cache.comments.indexOf(comment.id) > -1) return;
             this.cache.comments.push(comment.id);
             
-            if (this.cache.count != 0) {
+            if (this.cache._commentCount != 0) {
               this.emit("comment", new Comment(comment.id, Client), await Comment.formatData(comment));
+              this.cache._commentCount++;
             }
           });
         });
     }
-
-    this.cache.count++;
   }
 
   /**
