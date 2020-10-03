@@ -156,9 +156,10 @@ class Client extends EventEmitter {
             
             if (this.cache._postCount != 0) {
               this.emit("post", new Post(post.id, Client), await Post.formatData(post));
-              this.cache._postCount++;
             }
           });
+
+          this.cache._postCount++;
         });
     }
 
@@ -175,9 +176,10 @@ class Client extends EventEmitter {
             
             if (this.cache._commentCount != 0) {
               this.emit("comment", new Comment(comment.id, Client), await Comment.formatData(comment));
-              this.cache._commentCount++;
             }
           });
+
+          this.cache._commentCount++;
         });
     }
   }
