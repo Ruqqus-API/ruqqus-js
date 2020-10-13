@@ -70,10 +70,12 @@ class Post {
    */
 
   comment(body) {
-    if (!this.client.scopes.create) return new OAuthError({
-      message: 'Missing "Create" Scope',
-      code: 401
-    });
+    if (!this.client.scopes.create) { 
+      new OAuthError({
+        message: 'Missing "Create" Scope',
+        code: 401
+      }); return;
+    }
 
     if (!body || body == " ") return new OAuthError({
       message: "No Comment Body Provided!",
@@ -88,10 +90,12 @@ class Post {
    */
 
   upvote() {
-    if (!this.client.scopes.vote) return new OAuthError({
-      message: 'Missing "Vote" Scope',
-      code: 401
-    });
+    if (!this.client.scopes.vote) { 
+      new OAuthError({
+        message: 'Missing "Vote" Scope',
+        code: 401
+      }); return;
+    }
 
     this.client.APIRequest({ type: "POST", path: `vote/post/${this.id}/1` });
   }
@@ -101,10 +105,12 @@ class Post {
    */
 
   downvote() {
-    if (!this.client.scopes.vote) return new OAuthError({
-      message: 'Missing "Vote" Scope',
-      code: 401
-    });
+    if (!this.client.scopes.vote) {
+      new OAuthError({
+        message: 'Missing "Vote" Scope',
+        code: 401
+      }); return;
+    }
 
     this.client.APIRequest({ type: "POST", path: `vote/post/${this.id}/-1` });
   }
@@ -114,10 +120,12 @@ class Post {
    */
 
   removeVote() {
-    if (!this.client.scopes.vote) return new OAuthError({
-      message: 'Missing "Vote" Scope',
-      code: 401
-    });
+    if (!this.client.scopes.vote) {
+      new OAuthError({
+        message: 'Missing "Vote" Scope',
+        code: 401
+      }); return;
+    }
 
     this.client.APIRequest({ type: "POST", path: `vote/post/${this.id}/0` });
   }
@@ -127,15 +135,59 @@ class Post {
    */
 
   delete() {
-    if (!this.client.scopes.delete) return new OAuthError({
-      message: 'Missing "Delete" Scope',
-      code: 401 
-    });
+    if (!this.client.scopes.delete) {
+      new OAuthError({
+        message: 'Missing "Delete" Scope',
+        code: 401 
+      }); return;
+    }
     
     this.client.APIRequest({ type: "POST", path: `delete_post/${this.id}` })
       .then((resp) => {
         if (resp.error) new OAuthError({
           message: "Post Deletion Failed",
+          code: 403
+        });
+      });
+  }
+
+  /**
+   * Toggles post NSFW.
+   */
+
+  toggleNSFW() {
+    if (!this.client.scopes.update) {
+      new OAuthError({
+        message: 'Missing "Update" Scope',
+        code: 401 
+      }); return;
+    }
+
+    this.client.APIRequest({ type: "POST", path: `toggle_post_nsfw/${this.id}` })
+      .then((resp) => {
+        if (resp.error) new OAuthError({
+          message: "Post Update Failed",
+          code: 403
+        });
+      });
+  }
+
+  /**
+   * Toggles post NSFL.
+   */
+
+  toggleNSFL() {
+    if (!this.client.scopes.update) {
+      new OAuthError({
+        message: 'Missing "Update" Scope',
+        code: 401 
+      }); return;
+    }
+
+    this.client.APIRequest({ type: "POST", path: `toggle_post_nsfl/${this.id}` })
+      .then((resp) => {
+        if (resp.error) new OAuthError({
+          message: "Post Update Failed",
           code: 403
         });
       });

@@ -65,15 +65,19 @@ class Comment {
    */
 
   reply(body) {
-    if (!this.client.scopes.create) return new OAuthError({
-      message: 'Missing "Create" Scope',
-      code: 401
-    });
+    if (!this.client.scopes.create) {
+      new OAuthError({
+        message: 'Missing "Create" Scope',
+        code: 401
+      }); return;
+    }
 
-    if (!body || body == " ") return new OAuthError({
-      message: "No Comment Body Provided!",
-      code: 405
-    });
+    if (!body || body == " ") {
+      new OAuthError({
+        message: "No Comment Body Provided!",
+        code: 405
+      }); return;
+    }
 
     this.client.APIRequest({ type: "POST", path: "comment", options: { parent_fullname: `t3_${this.id}`, body: body } });
   }
@@ -83,10 +87,12 @@ class Comment {
    */
 
   upvote() {
-    if (!this.client.scopes.vote) return new OAuthError({
-      message: 'Missing "Vote" Scope',
-      code: 401
-    });
+    if (!this.client.scopes.vote) {
+      new OAuthError({
+        message: 'Missing "Vote" Scope',
+        code: 401
+      }); return;
+    }
     
     this.client.APIRequest({ type: "POST", path: `vote/comment/${this.id}/1` });
   }
@@ -96,10 +102,12 @@ class Comment {
    */
 
   downvote() {
-    if (!this.client.scopes.vote) return new OAuthError({
-      message: 'Missing "Vote" Scope',
-      code: 401
-    });
+    if (!this.client.scopes.vote) {
+      new OAuthError({
+        message: 'Missing "Vote" Scope',
+        code: 401
+      }); return;
+    }
 
     this.client.APIRequest({ type: "POST", path: `vote/comment/${this.id}/-1` });
   }
@@ -109,10 +117,12 @@ class Comment {
    */
 
   removeVote() {
-    if (!this.client.scopes.vote) return new OAuthError({
-      message: 'Missing "Vote" Scope',
-      code: 401
-    });
+    if (!this.client.scopes.vote) {
+      new OAuthError({
+        message: 'Missing "Vote" Scope',
+        code: 401
+      }); return;
+    }
     
     this.client.APIRequest({ type: "POST", path: `vote/comment/${this.id}/0` });
   }
@@ -122,10 +132,12 @@ class Comment {
    */
 
   delete() {
-    if (!this.client.scopes.delete) return new OAuthError({
-      message: 'Missing "Delete" Scope',
-      code: 401
-    });
+    if (!this.client.scopes.delete) {
+      new OAuthError({
+        message: 'Missing "Delete" Scope',
+        code: 401
+      }); return;
+    }
 
     this.client.APIRequest({ type: "POST", path: `delete/comment/${this.id}` })
       .then((resp) => {

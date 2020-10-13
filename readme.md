@@ -282,6 +282,12 @@ Removes the client's vote from the post.
 ### `Post.delete()`
 Deletes the post.
 
+### `Post.toggleNSFW()`
+Toggles post NSFW.
+
+### `Post.toggleNSFL()`
+Toggles post NSFL.
+
 ### `Comment.reply(body)`
 Submits a reply to the comment.
 

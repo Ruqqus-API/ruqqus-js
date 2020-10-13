@@ -75,7 +75,14 @@ class Client extends EventEmitter {
       }); return;
     }
 
-    let resp = await needle(options.type, options.path.startsWith("https://ruqqus.com/") ? options.path : `https://ruqqus.com/api/v1/${options.path.toLowerCase()}`, options.options || {}, { user_agent: Client.userAgent, headers: { Authorization: `Bearer ${Client.keys.refresh.access_token}`, "X-User-Type": "Bot" } });
+    let resp = await needle(options.type, options.path.startsWith("https://ruqqus.com/") ? options.path : `https://ruqqus.com/api/v1/${options.path.toLowerCase()}`, options.options || {}, { 
+      user_agent: Client.userAgent, 
+      headers: { 
+        Authorization: `Bearer ${Client.keys.refresh.access_token}`, 
+        "X-User-Type": "Bot",
+        "X-Library": "ruqqus-js",
+        "X-Supports": "auth",
+      } });
 
     if (resp.body.error && resp.body.error.startsWith("405")) {
       new OAuthError({

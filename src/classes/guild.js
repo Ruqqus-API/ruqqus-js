@@ -51,20 +51,26 @@ class Guild {
    */
 
   post(title, body, options) {
-    if (!this.client.scopes.create) return new OAuthError({
-      message: 'Missing "Create" Scope',
-      code: 401
-    });
+    if (!this.client.scopes.create) {
+      new OAuthError({
+        message: 'Missing "Create" Scope',
+        code: 401
+      }); return;
+    }
 
-    if (!title || title == " ") return new OAuthError({
-      message: "No Post Title Provided!",
-      code: 405
-    });
+    if (!title || title == " ") {
+      new OAuthError({
+        message: "No Post Title Provided!",
+        code: 405
+      }); return;
+    }
 
-    if (!body || body == " ") return new OAuthError({
-      message: "No Post Body Provided!",
-      code: 405
-    });
+    if (!body || body == " ") {
+      new OAuthError({
+        message: "No Post Body Provided!",
+        code: 405
+      }); return;
+    }
 
     this.client.APIRequest({ type: "POST", path: "submit", options: { board: this.name, title: title, body: body, url: options.url || "", over_18: options.nsfw } })
       .then((resp) => {

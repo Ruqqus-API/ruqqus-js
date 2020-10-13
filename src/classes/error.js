@@ -40,7 +40,10 @@ class OAuthError extends Error {
       403: "FORBIDDEN",
       404: "NOT_FOUND",
       405: "NOT_ALLOWED",
+      413: "TOO_LARGE",
+      422: "UNPROCESSABLE_ENTITY",
       500: "INTERNAL_ERROR",
+      502: "BAD_GATEWAY",
       503: "UNAVAILABLE"
     }
 
