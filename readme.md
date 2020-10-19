@@ -270,15 +270,6 @@ Submits a comment to the post.
 
 - **String** `body`: The body of the comment
 
-### `Post.upvote()`
-Upvotes the post.
-
-### `Post.downvote()`
-Downvotes the post.
-
-### `Post.removeVote()`
-Removes the client's vote from the post.
-
 ### `Post.delete()`
 Deletes the post.
 
@@ -294,15 +285,6 @@ Submits a reply to the comment.
 #### Parameters
 
 - **String** `body`: The body of the reply
-
-### `Comment.upvote()`
-Upvotes the comment.
-
-### `Comment.downvote()`
-Downvotes the comment.
-
-### `Comment.removeVote()`
-Removes the client's vote from the comment.
 
 ### `Comment.delete()`
 Deletes the comment.

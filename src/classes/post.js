@@ -87,6 +87,8 @@ class Post {
 
   /**
    * Upvotes the post.
+   * 
+   * @deprecated
    */
 
   upvote() {
@@ -102,6 +104,8 @@ class Post {
   
   /**
    * Downvotes the post.
+   * 
+   * @deprecated
    */
 
   downvote() {
@@ -117,6 +121,8 @@ class Post {
 
   /**
    * Removes the client's vote from the post.
+   * 
+   * @deprecated
    */
 
   removeVote() {

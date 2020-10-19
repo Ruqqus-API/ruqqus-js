@@ -20,6 +20,7 @@ class Comment {
           kind: resp.title.kind,
           color: resp.title.color
         } : null,
+        bot: resp.is_bot,
       },
       content: {
         text: resp.body,
@@ -84,6 +85,8 @@ class Comment {
 
   /**
    * Upvotes the comment.
+   * 
+   * @deprecated
    */
 
   upvote() {
@@ -99,6 +102,8 @@ class Comment {
 
   /** 
    * Downvotes the comment.
+   * 
+   * @deprecated
    */
 
   downvote() {
@@ -114,6 +119,8 @@ class Comment {
 
   /**
    * Removes the client's vote from the comment.
+   * 
+   * @deprecated
    */
 
   removeVote() {
