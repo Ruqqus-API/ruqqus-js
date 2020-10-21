@@ -90,7 +90,19 @@ class Guild {
    * @returns {Array} The post objects.
    */
 
-  async fetchPosts(sort, limit, page) {
+  /**
+   * Fetches an array of post objects from the guild.
+   * 
+   * @param {Object} [options] The post sorting parameters.
+   * @param {String} [options.sort=new] The post sorting method.
+   * @param {Number} [options.page=1] The page index to fetch posts from.
+   * @param {String} [options.filter=all] The post filter method.
+   * @param {Array} [options.timeframe=[0, 0]] The UTC timeframe in which to fetch posts from.
+   * @param {Number} [options.limit=24] The amount of post objects to return.
+   * @returns {Array} The post objects.
+   */
+
+  async fetchPosts(options) {
     const Post = require("./post.js");
 
     if (!this.client.scopes.read) {
@@ -101,8 +113,15 @@ class Guild {
     }
 
     let posts = [];
-    let resp = await this.client.APIRequest({ type: "GET", path: `guild/${this.name}/listing`, options: { sort: sort || "new", page: page || 1 } });
-    if (limit) resp.data.splice(limit, resp.data.length - limit);
+    let resp = await this.client.APIRequest({ type: "GET", path: `guild/${this.name}/listing`, options: { 
+      sort: options.sort || "new", 
+      page: options.page || 1, 
+      t: options.filter || "all", 
+      utc_greater_than: options.timeframe[0] || 0,
+      utc_less_than: options.timeframe[1] || 0
+    } || {} });
+
+    if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
     
     for await (let post of resp.data) {
       posts.push(await Post.formatData(post));
@@ -114,12 +133,13 @@ class Guild {
   /**
    * Fetches an array of comment objects from the guild.
    * 
-   * @param {Number} [limit=24] The amount of comment objects to return.
-   * @param {Number} [page=1] The page index to fetch comments from.
+   * @param {Object} [options] The post sorting parameters.
+   * @param {Number} [options.page=1] The page index to fetch comments from.
+   * @param {Number} [options.limit=24] The amount of comment objects to return.
    * @returns {Array} The comment objects.
    */
 
-  async fetchComments(limit, page) {
+  async fetchComments(options) {
     const Comment = require("./comment.js");
 
     if (!this.client.scopes.read) {
@@ -131,8 +151,8 @@ class Guild {
 
     let comments = [];
 
-    let resp = await this.client.APIRequest({ type: "GET", path: `guild/${this.name}/comments`, options: { page: page || 1 } });
-    if (limit) resp.data.splice(limit, resp.data.length - limit);
+    let resp = await this.client.APIRequest({ type: "GET", path: `guild/${this.name}/comments`, options: { page: options.page || 1 } || {} });
+    if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
     
     for await (let comment of resp.data) {
       comments.push(await Comment.formatData(comment));

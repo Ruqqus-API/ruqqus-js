@@ -68,13 +68,13 @@ class User {
   /**
    * Fetches an array of post objects from the user.
    * 
-   * @param {String} [sort=new] The post sorting method.
-   * @param {Number} [limit=24] The amount of post objects to return.
-   * @param {Number} [page=1] The page index to fetch posts from.
+   * @param {Object} [options] The post sorting parameters.
+   * @param {Number} [options.page=1] The page index to fetch posts from.
+   * @param {Number} [options.limit=24] The amount of post objects to return.
    * @returns {Array} The post objects.
    */
 
-  async fetchPosts(sort, limit, page) {
+  async fetchPosts(options) {
     const Post = require("./post.js");
 
     if (!this.client.scopes.read) {
@@ -86,8 +86,8 @@ class User {
 
     let posts = [];
     
-    let resp = await this.client.APIRequest({ type: "GET", path: `user/${this.username}/listing`, options: { sort: sort || "new", page: page || 1 } });
-    if (limit) resp.data.splice(limit, resp.data.length - limit);
+    let resp = await this.client.APIRequest({ type: "GET", path: `user/${this.username}/listing`, options: { page: options.page || 1 } || {} });
+    if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
 
     for await (let post of resp.data) {
       posts.push(await Post.formatData(post));
@@ -99,8 +99,9 @@ class User {
   /**
    * Fetches an array of comment objects from the user.
    * 
-   * @param {Number} [limit=24] The amount of comment objects to return.
-   * @param {Number} [page=1] The page index to fetch comments from.
+   * @param {Object} [options] The comment sorting parameters.
+   * @param {Number} [options.page=1] The page index to fetch comments from.
+   * @param {Number} [options.limit=24] The amount of comment objects to return.
    * @returns {Array} The comment objects.
    */
 
@@ -116,8 +117,8 @@ class User {
 
     let comments = [];
 
-    let resp = await this.client.APIRequest({ type: "GET", path: `user/${this.username}/comments`, options: { page: page || 1 } });
-    if (limit) resp.data.splice(limit, resp.data.length - limit);
+    let resp = await this.client.APIRequest({ type: "GET", path: `user/${this.username}/comments`, options: { page: options.page || 1 } || {} });
+    if (options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
     
     for await (let comment of resp.data) {
       comments.push(await Comment.formatData(comment));

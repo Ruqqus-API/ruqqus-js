@@ -48,12 +48,12 @@ client.on("post", (post, data) => {
 });
 
 // Comment event
-client.on("comment", (comment) => {
+client.on("comment", (comment, data) => {
   // Reply to the comment
   comment.reply("Very interesting.");
 
-  // Upvote the comment
-  comment.upvote();
+  // Get the author user of the comment
+  client.users.get(data.author.username);
 });
 ```
 
