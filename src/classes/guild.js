@@ -45,12 +45,11 @@ class Guild {
    * 
    * @param {String} title The title of the post.
    * @param {String} body The body of the post. Can include HTML and Markdown.
-   * @param {Object} [options] The post options.
-   * @param {String} [options.url] The post URL.
-   * @param {Boolean} [options.nsfw] Whether or not the post should be marked as NSFW.
+   * @param {String} url The post URL.
+   * @param {Boolean} options.nsfw Whether or not the post should be marked as NSFW.
    */
 
-  post(title, body, options) {
+  post(title, body, url, nsfw) {
     if (!this.client.scopes.create) {
       new OAuthError({
         message: 'Missing "Create" Scope',
@@ -58,16 +57,16 @@ class Guild {
       }); return;
     }
 
-    if (!title || title == " ") {
+    if (!title || title === " ") {
       new OAuthError({
         message: "No Post Title Provided!",
         code: 405
       }); return;
     }
 
-    if (!body || body == " ") {
+    if ((!body || body === " ") && (!url || url === " ")) {
       new OAuthError({
-        message: "No Post Body Provided!",
+        message: "No Post Body or URL Provided!",
         code: 405
       }); return;
     }
