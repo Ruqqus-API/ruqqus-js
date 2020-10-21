@@ -117,8 +117,8 @@ class Guild {
       sort: options.sort || "new", 
       page: options.page || 1, 
       t: options.filter || "all", 
-      utc_greater_than: options.timeframe[0] || 0,
-      utc_less_than: options.timeframe[1] || 0
+      utc_greater_than: options.timeframe && options.timeframe[0] || 0,
+      utc_less_than: options.timeframe && options.timeframe[1] || 0
     } || {} });
 
     if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
