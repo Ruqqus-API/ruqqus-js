@@ -233,8 +233,8 @@ Submits a post to the guild.
 #### Parameters
 
 - **String** `title`: The title of the post
-- **String** `body`: The body of the post. Can include HTML and Markdown
 - **Object** `options`: An object containing the following fields:
+  - `body` (String): The body of the post. Can include HTML and Markdown
   - `url` (String): The post URL
   - `nsfw` (Boolean): Whether or not the post should be marked as NSFW
 
