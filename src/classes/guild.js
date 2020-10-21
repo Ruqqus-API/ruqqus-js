@@ -72,7 +72,7 @@ class Guild {
       }); return;
     }
 
-    this.client.APIRequest({ type: "POST", path: "submit", options: { board: this.name, title: title, body: body, url: options.url || "", over_18: options.nsfw } })
+    this.client.APIRequest({ type: "POST", path: "submit", options: { board: this.name, title: title, body: body, url: url || "", over_18: nsfw } })
       .then((resp) => {
         if (!resp.guild_name == "general" && this.name.toLowerCase() != "general") new OAuthWarning({
           message: "Invalid Guild Name",
