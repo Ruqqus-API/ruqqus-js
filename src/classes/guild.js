@@ -44,12 +44,13 @@ class Guild {
    * Submits a post to the guild.
    * 
    * @param {String} title The title of the post.
-   * @param {String} body The body of the post. Can include HTML and Markdown.
-   * @param {String} url The post URL.
-   * @param {Boolean} options.nsfw Whether or not the post should be marked as NSFW.
+   * @param {Object} options The post parameters.
+   * @param {String} [body] The body of the post. Can include HTML and Markdown.
+   * @param {String} [url] The post URL.
+   * @param {Boolean} [nsfw=false] Whether or not the post should be marked as NSFW.
    */
 
-  post(title, body, url, nsfw) {
+  post(title, options) {
     if (!this.client.scopes.create) {
       new OAuthError({
         message: 'Missing "Create" Scope',
@@ -57,21 +58,21 @@ class Guild {
       }); return;
     }
 
-    if (!title || title === " ") {
+    if (!title || title == " ") {
       new OAuthError({
         message: "No Post Title Provided!",
         code: 405
       }); return;
     }
 
-    if ((!body || body === " ") && (!url || url === " ")) {
+    if (!options || ((!options.body || options.body == " ") && (!options.url || options.url == " "))) {
       new OAuthError({
         message: "No Post Body or URL Provided!",
         code: 405
       }); return;
     }
 
-    this.client.APIRequest({ type: "POST", path: "submit", options: { board: this.name, title: title, body: body, url: url || "", over_18: nsfw } })
+    this.client.APIRequest({ type: "POST", path: "submit", options: { board: this.name, title: title, ...options || {} } })
       .then((resp) => {
         if (!resp.guild_name == "general" && this.name.toLowerCase() != "general") new OAuthWarning({
           message: "Invalid Guild Name",
