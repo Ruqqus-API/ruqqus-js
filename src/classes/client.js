@@ -135,6 +135,13 @@ class Client extends EventEmitter {
             });
           }
 
+          let latest = await needle("GET", "https://registry.npmjs.org/ruqqus-js"); latest = Object.keys(latest.body.time); latest = latest[latest.length - 1];
+          let version = require(`${require("path").dirname(__dirname)}/version.js`).version;
+          if (version != latest) new OAuthWarning({
+            message: `Outdated Version (${version})`,
+            warning: "Some features may be deprecated!"
+          });
+
           if (!Client.scopes.read) new OAuthWarning({
             message: 'Missing "Read" Scope',
             warning: "Post and Comment events will not be emitted!"
