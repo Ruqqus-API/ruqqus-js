@@ -1,365 +1,123 @@
-# ruqqus-js
-A Node.js wrapper of the Ruqqus API; designed for Ruqqus Applications.
+<div align="center">
+  <br />
+  <p>
+    <img src="https://i.imgur.com/7ZsJ82E.png" width="300" alt="ruqqus-js" /></a>
+  </p>
+  <br />
+  <p>
+    <a href="https://www.npmjs.com/package/ruqqus-js"><img src="https://img.shields.io/npm/v/ruqqus-js.svg?maxAge=3600" alt="NPM Version" /></a>
+    <a href="https://www.npmjs.com/package/ruqqus-js"><img src="https://img.shields.io/npm/dt/ruqqus-js.svg?maxAge=3600" alt="NPM Downloads" /></a>
+    <a href="https://david-dm.org/acikek/ruqqus-js"><img src="https://img.shields.io/david/acikek/ruqqus-js.svg?maxAge=3600" alt="License" /></a>
+    <a href="https://github.com/acikek/ruqqus-js/blob/master/LICENSE"><img src="https://img.shields.io/github/license/acikek/ruqqus-js" alt="Build status" /></a>
+  </p>
+  <p>
+    <a href="https://nodei.co/npm/ruqqus-js/"><img src="https://nodei.co/npm/ruqqus-js.png?downloads=true" alt="NPM Install Info" /></a>
+  </p>
+</div>
 
-## Installation
-```sh
-npm install --save ruqqus-js
-```
+## Table of Contents
 
+- [About](#about)
+- [Setup](#setup)
+  - [Installation](#installation)
+  - [Creating a Ruqqus Application](#creating-a-ruqqus-application)
+  - [Acquiring an Authcode](#acquiring-an-authcode)
+    - [Manual URL Generation](#manual-url-generation)
+    - [Automatic URL Generation](#automatic-url-generation)
+  - [Completing the Setup](#completing-the-setup)
+- [Example](#example)
+- [Links](#links)
+  - [Developer Links](#developer-links)
+- [Contributing](#contributing)
+- [License](#license)
+
+## About
+
+ruqqus-js is a [Node.js](https://nodejs.org) module and wrapper of the [Ruqqus](https://ruqqus.com) API.
+
+- Designed for Ruqqus Applications
+- Object-oriented
+- Efficient, optimized
+- Ever-adapting to the Ruqqus API
 
 ## Setup
-If you do not already have an authorized Ruqqus Application, check step one on the [official help page](https://ruqqus.com/help/oauth).
 
-All API endpoints require an Access Token. This Access Token expires every hour; fortunately, the OAuth2 grant also comes with a Refresh Token. All of this is taken care of automatically. The OAuth2 grant checks for an authentication code before providing the Access Token.
+### Installation
+To install the NPM package: `npm i ruqqus-js`<br>
+**Requires Node.js v12.0.0 or newer.**
 
-Once again, you can learn how to acquire the authorization code by following steps two and three on the help page, linked above. Additional info can be found in the Bot Development section of the [Unofficial Ruqqus API Guide](https://drive.google.com/file/d/1dFzkVxidCHpvnUUTaYtLu6Cu7Wh0oeni/view).
+### Creating a Ruqqus Application
+If you do not have an authorized Ruqqus Application already, you must submit an API Key Request form in the [apps tab of Ruqqus settings](https://ruqqus.com/settings/apps). Keep in mind that approval is not guaranteed and it could take up to a day for the Ruqqus admins to approve your request.
 
+### Acquiring an Authcode
+Once you have your Application ID and client secret, you will need to acquire an authentication code ("authcode" for short). This will let the package automatically grant to the OAuth2 endpoint and retrieve an access token. 
+
+To acquire an authcode, you will need to generate a Ruqqus OAuth2 URL.
+
+#### Manual URL Generation
+
+Start with https://ruqqus.com/oauth/authorize and add the following URL parameters:
+
+- `client_id` - Your application's Client ID
+- `redirect_uri` - The redirect URI (or one of the URIs) specified in your application information. Must not use HTTP unless using localhost (use HTTPS - 
+instead).
+- `state` - This is your own anti-cross-site-forgery token. We don't do anything with this, except give it to the user to pass back to you later. You are responsible for generating and validating the state token.
+- `scope` - A comma-separated list of permission scopes that you are requesting. Valid scopes are: `identity`, `create`, `read`, `update`, `delete`, `vote`, and `guildmaster`.
+- `permanent` - optional. Set to `true` if you are requesting indefinite access. Omit if not.
+
+#### Automatic URL Generation
+
+ruqqus-js provides two functions for automatically generating an OAuth2 URL: `generateAuthURL()`, which takes parameters in the function arguments, and `generateAuthURLInput()`, which takes the parameters in the console. Below is an example of the former.
+
+```js
+const { generateAuthURL } = require("ruqqus-js");
+
+console.log(generateAuthURL({
+  id: "CLIENT_ID",
+  redirect: "REDIRECT_URI",
+  state: "STATE_TOKEN",
+  scopes: "SCOPE_LIST",
+  permanent: true
+});
+```
+
+### Completing the Setup
+
+If you did everything correctly, the URL should take you to an Authorization page, which should subsequently take you to your specified redirect URI. The authcode should be in the URL. Follow the code in the [example section](#example) with the client parameters to run your bot.
 
 ## Example
+
 ```js
 const Ruqqus = require("ruqqus-js");
 
-// Create a new Client instance
 const client = new Ruqqus.Client({
   id: "CLIENT_ID",
   token: "CLIENT_SECRET",
   code: "AUTHCODE"
 });
 
-// Login event
-client.on("login", async () => {
-  // Get the +RuqqusAPI guild and submit a post
-  client.guilds.get("RuqqusAPI").post("Hey guys!", "I just posted this with a bot!");
-
-  // Asynchronously fetch post data from a post ID and log it to the console 
-  console.log(await client.posts.fetchData("2v0b"));
-
-  // Log the client's user data
-  console.log(client.user.data);
-});
-
-// Post event
-client.on("post", (post, data) => {
-  // Comment on the post
-  post.comment("Hello!");
-
-  // Log the post data
-  console.log(data);
-});
-
-// Comment event
-client.on("comment", (comment, data) => {
-  // Reply to the comment
-  comment.reply("Very interesting.");
-
-  // Get the author user of the comment
-  client.users.get(data.author.username);
+client.on("ready", () => {
+  console.log(`Logged in as ${client.user.username}!`);
 });
 ```
 
+## Links
 
-## Documentation
+- [Documentation](https://github.com/acikek/ruqqus-js/wiki)
+- [Ruqqus API Discord Server](https://discord.com/invite/GWRutXB)
+- [GitHub](https://github.com/acikek/ruqqus-js)
+- [NPM](https://npmjs.com/package/ruqqus-js)
 
-### `Client(options)`
-Creates a new Ruqqus Client instance.
+### Developer Links
 
-#### Parameters
-
-- **Object** `options`: An object containing the following fields:
-  - `id` (String): The Application ID
-  - `token` (String): The Application secret
-  - `code` (String): The one-time use authorization code
-  - `agent` (String): Optional custom `user_agent`
-  - `refresh` (String): Optional refresh token. Overrides authorization code
-
-### `Client.guilds.get(name)`
-Gets a guild with the specified name.
-
-#### Parameters
-
-- **String** `name`: The guild name
-
-#### Return
-
-- **Guild**
-
-### `Client.guilds.fetchData(name)`
-Fetches the data from a guild with the specified name. (Asynchronous)
-
-#### Parameters
-
-- **String** `name`: The guild name
-
-#### Return
-
-- **Object**: The guild data
-
-### `Client.guilds.isAvailable(name)`
-Fetches whether or not a guild with the specified name is available. (Asynchronous)
-
-#### Parameters
-
-- **String** `name`: The guild name
-
-#### Return
-
-- **Boolean**
-
-### `Client.posts.get(id)`
-Gets a post with the specified ID.
-
-#### Parameters
-
-- **String** `id`: The post ID
-
-#### Return
-
-- **Post**
-
-### `Client.posts.fetchData(id)`
-Fetches the data from a post with the specified name. (Asynchronous)
-
-#### Parameters
-
-- **String** `id`: The post ID
-
-#### Return
-
-- **Object**: The post data
-
-### `Client.comments.get(id)`
-Gets a comment with the specified ID.
-
-#### Parameters
-
-- **String** `id`: The comment ID
-
-#### Return
-
-- **Comment**
-
-### `Client.comments.fetchData(id)`
-Fetches the data from a comment with the specified name. (Asynchronous)
-
-#### Parameters
-
-- **String** `id`: The comment ID
-
-#### Return
-
-- **Object**: The comment data
-
-### `Client.users.get(username)`
-Gets a user with the specified username.
-
-#### Parameters
-
-- **String** `username`: The user's name
-
-#### Return
-
-- **User**
-
-### `Client.users.fetchData(username)`
-Fetches the data from a user with the specified username. (Asynchronous)
-
-#### Parameters
-
-- **String** `username`: The user's name
-
-#### Return
-
-- **Object**: The user data
-
-### `Client.users.isAvailable(username)`
-Fetches whether or not a user with the specified username is available. (Asynchronous)
-
-#### Parameters
-
-- **String** `username`: The user's name
-
-#### Return
-
-- **Boolean**
-
-### `Client.on(event)`
-Adds an event listener function. When an event is emitted, runs the function.
-
-#### Parameters
-
-- **String** `event`: The event to emit. Valid events:
-  - `login`: Emitted when first refresh key obtained
-  - `post`: Emitted when a new post is made. Parameters:
-    - **Post**: The post
-    - **Object**: The post data
-  - `comment`: Emitted when a new comment is made. Parameters:
-    - **Comment**: The comment
-    - **Object**: The comment data
-
-### `Client.user.data`
-The client's user data object.
-
-### `Client.user.fetchData()`
-Fetches the data from the Client user.
-
-#### Return
-
-- **Object** The user data
-
-### `Client.uptime`
-The amount of time that has passed since Client login.
-
-### `Client.APIRequest(options)`
-Issues a Ruqqus API request. *Static method*
-
-#### Parameters
-
-- **Object** `options`: An object containing the following fields:
-  - `type` (String): The request method
-  - `path` (String): The request endpoint
-  - `options` (Object): Optional extra request options
-
-#### Return
-
-- **Object** The request response body
-
-#### Return
-
-- **Number** The time, in seconds
-
-### `Guild.post(title, body, options)`
-Submits a post to the guild.
-
-#### Parameters
-
-- **String** `title`: The title of the post
-- **Object** `options`: An object containing the following fields:
-  - `body` (String): The body of the post. Can include HTML and Markdown
-  - `url` (String): The post URL
-  - `nsfw` (Boolean): Whether or not the post should be marked as NSFW
-
-### `Guild.fetchPosts(sort, limit, page)`
-Fetches an array of post objects from the guild.
-
-#### Parameters
-
-- **String** `sort`: The post sorting method. Defaults to "new"
-- **Number** `limit`: The amount of post objects to return. Defaults to 24
-- **Number** `page`: The page index to fetch posts from. Defaults to 1
-
-#### Return
-
-- **Array**: The post objects
-
-### `Guild.fetchComments(limit, page)`
-Fetches an array of comment objects from the guild.
-
-#### Parameters
-
-- **Number** `limit`: The amount of comment objects to return. Defaults to 24
-- **Number** `page`: The page index to fetch comments from. Defaults to 1
-
-#### Return
-
-- **Array**: The comment objects
-
-### `Post.comment(body)`
-Submits a comment to the post.
-
-#### Parameters
-
-- **String** `body`: The body of the comment
-
-### `Post.delete()`
-Deletes the post.
-
-### `Post.toggleNSFW()`
-Toggles post NSFW.
-
-### `Post.toggleNSFL()`
-Toggles post NSFL.
-
-### `Comment.reply(body)`
-Submits a reply to the comment.
-
-#### Parameters
-
-- **String** `body`: The body of the reply
-
-### `Comment.delete()`
-Deletes the comment.
-
-### `User.fetchPosts(sort, limit, page)`
-Fetches an array of post objects from the user.
-
-#### Parameters
-
-- **String** `sort`: The post sorting method. Defaults to "new"
-- **Number** `limit`: The amount of post objects to return. Defaults to 24
-- **Number** `page`: The page index to fetch posts from. Defaults to 1
-
-#### Return
-
-- **Array**: The post objects
-
-### `User.fetchComments(limit, page)`
-Fetches an array of comment objects from the user.
-
-#### Parameters
-
-- **Number** `limit`: The amount of comment objects to return. Defaults to 24
-- **Number** `page`: The page index to fetch comments from. Defaults to 1
-
-#### Return
-
-- **Array**: The comment objects
-
-### `OAuthWarning(options)`
-Creates and throws a new OAuth Warning.
-
-#### Parameters
-
-- **Object** `options`: An object containing the following fields:
-  - `message` (String): The Warning message
-  - `warning` (String): The Warning consequence
-
-### `OAuthError(options)`
-Creates and throws a new OAuth Error.
-
-#### Parameters
-
-- **Object** `options`: An object containing the following fields:
-  - `message` (String): The Error message
-  - `code` (Number): The Error code. Status messages are handled automatically
-  - `fatal` (Boolean): Whether or not the Error should be treated as fatal
-
-#### Return
-
-- **Object** The Error object
-
-### `getAuthURL(options)`
-Generates a URL for obtaining an authorization code.
-
-#### Parameters
-
-- **Object** `options`: An object containing the following fields:
-  - `id` (String): The Application ID
-  - `redirect` (String): The Application redirect URI
-  - `state` (String): The Application state token
-  - `scopes` (Array|String): The Application scopes. Either a string of values separated by commas or an array
-  - `permanent` (Boolean): Whether or not the Application will have permanent access to the account
-
-#### Return
-
-- **String** The generated URL
-
-### `getAuthURLInput()`
-Generates a URL for obtaining an authorization code based on console input. Exits the process upon completion.
+- [Ruqqus OAuth2 Help Page](https://ruqqus.com/help/oauth)
+- [Unofficial API Documentation](https://drive.google.com/file/d/1dFzkVxidCHpvnUUTaYtLu6Cu7Wh0oeni/view)
 
 ## Contributing
 
-If you find any issues/bugs with this package, feel free to open a Pull Request at the [Github repository](https://github.com/acikek/ruqqus-js). If you'd rather not, you can always talk to me on the [official Ruqqus Discord server](https://ruqqus.com/discord), the [unofficial Ruqqus API Discord server](https://discord.gg/GWRutXB), or just add me at **acikek#8472**.
+Please check if an issue has already been reported or suggested before creating a new one. Make sure to also review the [documentation](https://github.com/acikek/ruqqus-js/wiki). Feel free to open a Pull Request if you find something noteworthy enough to change.
 
+Most of the discussion regarding support/suggestions happens on the [Ruqqus API Discord Server](https://discord.com/invite/GWRutXB), so don't hesitate to join if you have any questions.
 
 ## License
 
