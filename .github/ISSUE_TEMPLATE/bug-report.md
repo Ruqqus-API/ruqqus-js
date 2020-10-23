@@ -10,8 +10,12 @@ assignees: acikek
 **Describe the Bug**
 A clear and concise description of what the bug is.
 
-**To Reproduce**
+**Steps to Reproduce**
 A list of steps to be able to reproduce this behavior.
+
+1. 
+2. 
+3. 
 
 **Expected Behavior**
 A clear and concise description of what you expected to happen.
