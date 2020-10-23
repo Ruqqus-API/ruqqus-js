@@ -1,13 +1,13 @@
+const Client = require("./client.js");
 const { OAuthWarning, OAuthError } = require("./error.js");
 
 class Guild {
-  constructor(name, client) {
+  constructor(name) {
     this.name = name;
-    this.client = client;
   }
 
   async _fetchData(format) {
-    let resp = format || await this.client.APIRequest({ type: "GET", path: `guild/${this.name}` });
+    let resp = format || await Client.APIRequest({ type: "GET", path: `guild/${this.name}` });
 
     if (!resp.id) return undefined;
 
@@ -51,7 +51,7 @@ class Guild {
    */
 
   post(title, options) {
-    if (!this.client.scopes.create) {
+    if (!Client.scopes.create) {
       new OAuthError({
         message: 'Missing "Create" Scope',
         code: 401
@@ -72,7 +72,7 @@ class Guild {
       }); return;
     }
 
-    this.client.APIRequest({ type: "POST", path: "submit", options: { board: this.name, title: title, ...options || {} } })
+    Client.APIRequest({ type: "POST", path: "submit", options: { board: this.name, title: title, ...options || {} } })
       .then((resp) => {
         if (!resp.guild_name == "general" && this.name.toLowerCase() != "general") new OAuthWarning({
           message: "Invalid Guild Name",
@@ -105,7 +105,7 @@ class Guild {
   async fetchPosts(options) {
     const Post = require("./post.js");
 
-    if (!this.client.scopes.read) {
+    if (!Client.scopes.read) {
       new OAuthError({
         message: 'Missing "Read" Scope',
         code: 401
@@ -113,13 +113,13 @@ class Guild {
     }
 
     let posts = [];
-    let resp = await this.client.APIRequest({ type: "GET", path: `guild/${this.name}/listing`, options: { 
+    let resp = await Client.APIRequest({ type: "GET", path: `guild/${this.name}/listing`, options: options ? { 
       sort: options.sort || "new", 
       page: options.page || 1, 
       t: options.filter || "all", 
       utc_greater_than: options.timeframe && options.timeframe[0] || 0,
       utc_less_than: options.timeframe && options.timeframe[1] || 0
-    } || {} });
+    } : {} });
 
     if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
     
@@ -142,7 +142,7 @@ class Guild {
   async fetchComments(options) {
     const Comment = require("./comment.js");
 
-    if (!this.client.scopes.read) {
+    if (!Client.scopes.read) {
       new OAuthError({
         message: 'Missing "Read" Scope',
         code: 401
@@ -151,7 +151,7 @@ class Guild {
 
     let comments = [];
 
-    let resp = await this.client.APIRequest({ type: "GET", path: `guild/${this.name}/comments`, options: { page: options.page || 1 } || {} });
+    let resp = await Client.APIRequest({ type: "GET", path: `guild/${this.name}/comments`, options: { page: options.page || 1 } || {} });
     if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
     
     for await (let comment of resp.data) {

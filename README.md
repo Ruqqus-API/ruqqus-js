@@ -61,18 +61,18 @@ Start with https://ruqqus.com/oauth/authorize and add the following URL paramete
 - `client_id` - Your application's Client ID
 - `redirect_uri` - The redirect URI (or one of the URIs) specified in your application information. Must not use HTTP unless using localhost (use HTTPS - 
 instead).
-- `state` - This is your own anti-cross-site-forgery token. We don't do anything with this, except give it to the user to pass back to you later. You are responsible for generating and validating the state token.
+- `state` - This is your own anti-cross-site-forgery token. Ruqqus doesn't do anything with this, except give it to the user to pass back to you later. You are responsible for generating and validating the state token.
 - `scope` - A comma-separated list of permission scopes that you are requesting. Valid scopes are: `identity`, `create`, `read`, `update`, `delete`, `vote`, and `guildmaster`.
 - `permanent` - optional. Set to `true` if you are requesting indefinite access. Omit if not.
 
 #### Automatic URL Generation
 
-ruqqus-js provides two functions for automatically generating an OAuth2 URL: `generateAuthURL()`, which takes parameters in the function arguments, and `generateAuthURLInput()`, which takes the parameters in the console. Below is an example of the former.
+ruqqus-js provides two functions for automatically generating an OAuth2 URL: `getAuthURL()`, which takes parameters in the function arguments, and `getAuthURLInput()`, which takes the parameters in the console. Below is an example of the former.
 
 ```js
-const { generateAuthURL } = require("ruqqus-js");
+const { getAuthURL } = require("ruqqus-js");
 
-console.log(generateAuthURL({
+console.log(getAuthURL({
   id: "CLIENT_ID",
   redirect: "REDIRECT_URI",
   state: "STATE_TOKEN",
@@ -83,7 +83,7 @@ console.log(generateAuthURL({
 
 ### Completing the Setup
 
-If you did everything correctly, the URL should take you to an Authorization page, which should subsequently take you to your specified redirect URI. The authcode should be in the URL. Follow the code in the [example section](#example) with the client parameters to run your bot.
+If you did everything correctly, the URL should take you to an Authorization page, which should subsequently take you to your specified redirect URI. The authcode should be in the URL; keep in mind that every code has a **one-time use**. Follow the code in the [example section](#example) with the client parameters to run your bot.
 
 ## Example
 

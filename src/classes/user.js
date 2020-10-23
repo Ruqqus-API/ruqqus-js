@@ -1,13 +1,13 @@
+const Client = require("./client.js");
 const { OAuthError } = require("./error.js");
 
 class User {
-  constructor(username, client) {
+  constructor(username) {
     this.username = username;
-    this.client = client;
   }
 
   async _fetchData(format) {
-    let resp = format || await this.client.APIRequest({ type: "GET", path: `user/${this.username}` });
+    let resp = format || await Client.APIRequest({ type: "GET", path: `user/${this.username}` });
 
     if (!resp.id) return undefined;
 
@@ -77,7 +77,7 @@ class User {
   async fetchPosts(options) {
     const Post = require("./post.js");
 
-    if (!this.client.scopes.read) {
+    if (!Client.scopes.read) {
       new OAuthError({
         message: 'Missing "Read" Scope',
         code: 401
@@ -86,7 +86,7 @@ class User {
 
     let posts = [];
     
-    let resp = await this.client.APIRequest({ type: "GET", path: `user/${this.username}/listing`, options: { page: options.page || 1 } || {} });
+    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/listing`, options: { page: options.page || 1 } || {} });
     if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
 
     for await (let post of resp.data) {
@@ -108,7 +108,7 @@ class User {
   async fetchComments(limit, page) {
     const Comment = require("./comment.js");
 
-    if (!this.client.scopes.read) {
+    if (!Client.scopes.read) {
       new OAuthError({
         message: 'Missing "Read" Scope',
         code: 401
@@ -117,7 +117,7 @@ class User {
 
     let comments = [];
 
-    let resp = await this.client.APIRequest({ type: "GET", path: `user/${this.username}/comments`, options: { page: options.page || 1 } || {} });
+    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/comments`, options: { page: options.page || 1 } || {} });
     if (options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
     
     for await (let comment of resp.data) {

@@ -1,13 +1,13 @@
+const Client = require("./client.js");
 const { OAuthError } = require("./error.js");
 
 class Comment {
-  constructor(id, client) {
+  constructor(id) {
     this.id = id;
-    this.client = client;
   }
 
   async _fetchData(format) {
-    let resp = format || await this.client.APIRequest({ type: "GET", path: `comment/${this.id}` });
+    let resp = format || await Client.APIRequest({ type: "GET", path: `comment/${this.id}` });
 
     if (!resp.id) return undefined;
     
@@ -66,7 +66,7 @@ class Comment {
    */
 
   reply(body) {
-    if (!this.client.scopes.create) {
+    if (!Client.scopes.create) {
       new OAuthError({
         message: 'Missing "Create" Scope',
         code: 401
@@ -80,7 +80,7 @@ class Comment {
       }); return;
     }
 
-    this.client.APIRequest({ type: "POST", path: "comment", options: { parent_fullname: `t3_${this.id}`, body: body } });
+    Client.APIRequest({ type: "POST", path: "comment", options: { parent_fullname: `t3_${this.id}`, body: body } });
   }
 
   /**
@@ -90,14 +90,14 @@ class Comment {
    */
 
   upvote() {
-    if (!this.client.scopes.vote) {
+    if (!Client.scopes.vote) {
       new OAuthError({
         message: 'Missing "Vote" Scope',
         code: 401
       }); return;
     }
     
-    this.client.APIRequest({ type: "POST", path: `vote/comment/${this.id}/1` });
+    Client.APIRequest({ type: "POST", path: `vote/comment/${this.id}/1` });
   }
 
   /** 
@@ -107,14 +107,14 @@ class Comment {
    */
 
   downvote() {
-    if (!this.client.scopes.vote) {
+    if (!Client.scopes.vote) {
       new OAuthError({
         message: 'Missing "Vote" Scope',
         code: 401
       }); return;
     }
 
-    this.client.APIRequest({ type: "POST", path: `vote/comment/${this.id}/-1` });
+    Client.APIRequest({ type: "POST", path: `vote/comment/${this.id}/-1` });
   }
 
   /**
@@ -124,14 +124,14 @@ class Comment {
    */
 
   removeVote() {
-    if (!this.client.scopes.vote) {
+    if (!Client.scopes.vote) {
       new OAuthError({
         message: 'Missing "Vote" Scope',
         code: 401
       }); return;
     }
     
-    this.client.APIRequest({ type: "POST", path: `vote/comment/${this.id}/0` });
+    Client.APIRequest({ type: "POST", path: `vote/comment/${this.id}/0` });
   }
 
   /**
@@ -139,14 +139,14 @@ class Comment {
    */
 
   delete() {
-    if (!this.client.scopes.delete) {
+    if (!Client.scopes.delete) {
       new OAuthError({
         message: 'Missing "Delete" Scope',
         code: 401
       }); return;
     }
 
-    this.client.APIRequest({ type: "POST", path: `delete/comment/${this.id}` })
+    Client.APIRequest({ type: "POST", path: `delete/comment/${this.id}` })
       .then((resp) => {
         if (resp.error) new OAuthError({
           message: "Comment Deletion Failed",

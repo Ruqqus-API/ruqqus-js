@@ -2,10 +2,6 @@ const needle = require("needle");
 const chalk = require("chalk");
 const { EventEmitter } = require("events");
 
-const Guild = require("./guild.js");
-const Post = require("./post.js");
-const Comment = require("./comment.js");
-const User = require("./user.js");
 const { OAuthWarning, OAuthError } = require("./error.js");
 
 class Client extends EventEmitter {
@@ -169,7 +165,8 @@ class Client extends EventEmitter {
             this.cache.posts.push(post.id);
             
             if (this.cache._postCount != 0) {
-              this.emit("post", new Post(post.id, Client), await Post.formatData(post));
+              const Post = require("./post.js");
+              this.emit("post", new Post(post.id), await Post.formatData(post));
             }
           });
 
@@ -189,7 +186,8 @@ class Client extends EventEmitter {
             this.cache.comments.push(comment.id);
             
             if (this.cache._commentCount != 0) {
-              this.emit("comment", new Comment(comment.id, Client), await Comment.formatData(comment));
+              const Comment = require("./comment.js");
+              this.emit("comment", new Comment(comment.id), await Comment.formatData(comment));
             }
           });
 
@@ -226,7 +224,7 @@ class Client extends EventEmitter {
       }
 
       let resp = await Client.APIRequest({ type: "GET", path: "identity" });
-      let data = User.formatData(resp);
+      let data = (require("./user.js")).formatData(resp);
 
       this.data = data;
       return data;
@@ -242,7 +240,7 @@ class Client extends EventEmitter {
      */
 
     get(name) {
-      return new Guild(name, Client);
+      return new (require("./guild.js"))(name);
     },
 
     /**
@@ -260,7 +258,7 @@ class Client extends EventEmitter {
         }); return;
       }
 
-      return await new Guild(name, Client)._fetchData();
+      return await new (require("./guild.js"))(name)._fetchData();
     },
 
     /**
@@ -287,7 +285,7 @@ class Client extends EventEmitter {
      */
 
     get(id) {
-      return new Post(id, Client);
+      return new (require("./post.js"))(id);
     },
 
     /**
@@ -305,7 +303,7 @@ class Client extends EventEmitter {
         }); return;
       }
 
-      return await new Post(id, Client)._fetchData();
+      return await new (require("./post.js"))(id)._fetchData();
     }
   }
 
@@ -318,7 +316,7 @@ class Client extends EventEmitter {
      */
 
     get(id) {
-      return new Comment(id, Client);
+      return new (require("./comment.js"))(id);
     },
 
     /**
@@ -336,7 +334,7 @@ class Client extends EventEmitter {
         }); return;
       }
 
-      return await new Comment(id, Client)._fetchData();
+      return await new (require("./comment.js"))(id)._fetchData();
     }
   }
 
@@ -349,7 +347,7 @@ class Client extends EventEmitter {
      */
 
     get(username) {
-      return new User(username, Client);
+      return new (require("./user.js"))(username);
     },
 
     /**
@@ -367,7 +365,7 @@ class Client extends EventEmitter {
         }); return;
       }
 
-      return await new User(username, Client)._fetchData();
+      return await new (require("./user.js"))(username)._fetchData();
     },
 
     /**
