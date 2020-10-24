@@ -3,6 +3,7 @@ const chalk = require("chalk");
 const { EventEmitter } = require("events");
 
 const { OAuthWarning, OAuthError } = require("./error.js");
+const config = require("../util/config.js");
 
 class Client extends EventEmitter {
   /**
@@ -18,7 +19,18 @@ class Client extends EventEmitter {
    */
 
   constructor(options) {
-    super();  
+    super();
+
+    if (!options) options = {};
+    let cfg = config.get();
+
+    options = cfg ? {
+      id: cfg.keys.id || "",
+      token: cfg.keys.token || "",
+      code: options.code || "",
+      agent: cfg.agent || null,
+      refresh: cfg.refresh || null,
+    } : options;
 
     Client.keys = {
       code: {
@@ -91,6 +103,12 @@ class Client extends EventEmitter {
   }
   
   _refreshToken() {
+    if (!config.get()) {
+      config.regenerate();
+    } else if (config.get("autosave") === true && config.get("refresh") && config.get("refresh") != " ") {
+      Client.keys.refresh.refresh_token = config.get("refresh");
+    }
+
     Client.APIRequest({ type: "POST", path: "https://ruqqus.com/oauth/grant", options: Client.keys.refresh.refresh_token ? Client.keys.refresh : Client.keys.code })
       .then(async (resp) => {
         if (resp.oauth_error) {
@@ -113,6 +131,10 @@ class Client extends EventEmitter {
           Client.scopes[s] = true;
         });
 
+        if (config.get("autosave") === true && resp.refresh_token) {
+          config.set("refresh", resp.refresh_token);
+        }
+
         Client.keys.refresh.refresh_token = resp.refresh_token || null;
         Client.keys.refresh.access_token = resp.access_token;
         let refreshIn = (resp.expires_at - 5) * 1000 - Date.now()
@@ -132,9 +154,8 @@ class Client extends EventEmitter {
           }
 
           let latest = await needle("GET", "https://registry.npmjs.org/ruqqus-js"); latest = Object.keys(latest.body.time); latest = latest[latest.length - 1];
-          let version = require(`${require("path").dirname(__dirname)}/version.js`).version;
-          if (version != latest) new OAuthWarning({
-            message: `Outdated Version (${version})`,
+          if (require("../version.js").version != latest) new OAuthWarning({
+            message: `Outdated Version (${require(`../version.js`).version})`,
             warning: "Some features may be deprecated!"
           });
 

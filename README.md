@@ -97,7 +97,7 @@ const client = new Ruqqus.Client({
 });
 
 client.on("ready", () => {
-  console.log(`Logged in as ${client.user.username}!`);
+  console.log(`Logged in as ${client.user.data.username}!`);
 });
 ```
 
