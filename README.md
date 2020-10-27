@@ -122,3 +122,10 @@ Most of the discussion regarding support/suggestions happens on the [Ruqqus API 
 ## License
 
 MIT © 2020 Kyle Prince
+
+<div align="center">
+  <br />
+  <p>
+    <a href="https://bitkit.sethcam.ml"><img src="https://cdn.discordapp.com/attachments/769269060584079383/770752384350683146/bitkit.png" width="300" alt="Bitkit" /></a>
+  </p>
+</div>
