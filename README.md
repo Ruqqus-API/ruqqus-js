@@ -9,7 +9,7 @@
     <a href="https://www.npmjs.com/package/ruqqus-js"><img src="https://img.shields.io/npm/dt/ruqqus-js.svg?maxAge=3600" alt="NPM Downloads" /></a>
     <a href="https://david-dm.org/acikek/ruqqus-js"><img src="https://img.shields.io/david/acikek/ruqqus-js.svg?maxAge=3600" alt="License" /></a>
     <a href="https://github.com/acikek/ruqqus-js/blob/master/LICENSE"><img src="https://img.shields.io/github/license/acikek/ruqqus-js" alt="Build status" /></a>
-    <a href="https://discord.gg/TC9S8JB"><img src="https://discord.com/assets/2c21aeda16de354ba5334551a883b481.png" alt="Discord" /></a>
+    <a href="https://discord.gg/TC9S8JB"><img src="https://img.shields.io/discord/591914197219016707.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2" alt="Discord" /></a>
   </p>
   <p>
     <a href="https://nodei.co/npm/ruqqus-js/"><img src="https://nodei.co/npm/ruqqus-js.png?downloads=true" alt="NPM Install Info" /></a>
