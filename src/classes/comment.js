@@ -2,26 +2,15 @@ const Client = require("./client.js");
 const { OAuthError } = require("./error.js");
 
 class Comment {
-  constructor(id) {
-    this.id = id;
+  constructor(data) {
+    Object.assign(this, Comment.formatData(data));
   }
 
-  async _fetchData(format) {
-    let resp = format || await Client.APIRequest({ type: "GET", path: `comment/${this.id}` });
-
+  static formatData(resp) {
     if (!resp.id) return undefined;
     
     return {
-      author: {
-        username: resp.author,
-        title: resp.title ? {
-          name: resp.title.text.startsWith(",") ? resp.title.text.split(", ")[1] : resp.title.text,
-          id: resp.title.id,
-          kind: resp.title.kind,
-          color: resp.title.color
-        } : null,
-        bot: resp.is_bot,
-      },
+      author: new (require("./user.js"))(resp.author),
       content: {
         text: resp.body,
         html: resp.body_html
@@ -31,17 +20,15 @@ class Comment {
         upvotes: resp.upvotes,
         downvotes: resp.downvotes
       },
-      parent: {
-        post: resp.post,
-        comment: resp.parent.startsWith("t3") ? resp.parent : null
-      },
       id: resp.id,
       full_id: resp.fullname,
       link: resp.permalink,
       full_link: `https://ruqqus.com${resp.permalink}`,
+      parent_id: resp.parent_id,
       created_at: resp.created_utc,
       edited_at: resp.edited_utc,
       chain_level: resp.level,
+      awards: resp.award_count,
       flags: {
         archived: resp.is_archived,
         banned: resp.is_banned,
@@ -51,12 +38,8 @@ class Comment {
         offensive: resp.is_offensive,
         edited: resp.edited_utc > 0
       },
-      guild: resp.guild_name,
+      post: new (require("./post.js"))(resp.post)
     }
-  }
-
-  static formatData(format) {
-    return new Comment()._fetchData(format);
   }
 
   /**

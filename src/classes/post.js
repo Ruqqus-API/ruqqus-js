@@ -2,25 +2,15 @@ const Client = require("./client.js");
 const { OAuthError } = require("./error.js");
 
 class Post {
-  constructor(id) {
-    this.id = id;
+  constructor(data) {
+    Object.assign(this, Post.formatData(data));
   }
   
-  async _fetchData(format) {
-    let resp = format || await Client.APIRequest({ type: "GET", path: `post/${this.id}`, options: { sort: "top" } });
-
+  static formatData(resp) {
     if (!resp.id) return undefined;
 
     return {
-      author: {
-        username: resp.author,
-        title: resp.author_title ? {
-          name: resp.author_title.text.startsWith(",") ? resp.author_title.text.split(", ")[1] : resp.author_title.text,
-          id: resp.author_title.id,
-          kind: resp.author_title.kind,
-          color: resp.author_title.color
-        } : null
-      },
+      author: new (require("./user.js"))(resp.author),
       content: {
         title: resp.title,
         body: {
@@ -50,17 +40,12 @@ class Post {
         deleted: resp.is_deleted,
         nsfw: resp.is_nsfw,
         nsfl: resp.is_nsfl,
-        edited: resp.edited_utc > 0
+        edited: resp.edited_utc > 0,
+        yanked: resp.original_guild ? true : false
       },
-      guild: {
-        name: resp.guild_name,
-        original_name: resp.original_guild_name
-      }
+      guild: new (require("./guild.js"))(resp.guild),
+      original_guild: resp.original_guild ? new (require("./guild.js"))(resp.original_guild) : null
     }
-  }
-
-  static formatData(format) {
-    return new Post()._fetchData(format);
   }
 
   /**

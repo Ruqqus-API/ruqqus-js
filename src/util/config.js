@@ -1,7 +1,7 @@
 const fs = require("fs");
 
 const { OAuthError } = require("../classes/error.js");
-const path = `${__dirname}/config.json`;
+let path = `${__dirname}/config.json`;
 
 function update(obj) {
   fs.writeFileSync(path, JSON.stringify(obj, null, 2));
@@ -95,6 +95,16 @@ config.set = function(attribute, value) {
     config[attribute] = value;
     update(config);
   }
+}
+
+/**
+ * Sets the config file directory.
+ * 
+ * @param {String} dir The config directory.
+ */
+
+config.path = function(dir) {
+  path = dir || `${__dirname}/config.json`;
 }
 
 module.exports = config;

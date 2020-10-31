@@ -2,13 +2,11 @@ const Client = require("./client.js");
 const { OAuthError } = require("./error.js");
 
 class User {
-  constructor(username) {
-    this.username = username;
+  constructor(data) {
+    Object.assign(this, User.formatData(data));
   }
 
-  async _fetchData(format) {
-    let resp = format || await Client.APIRequest({ type: "GET", path: `user/${this.username}` });
-
+  static formatData(resp) {
     if (!resp.id) return undefined;
 
     if (resp.is_banned) {
@@ -50,19 +48,10 @@ class User {
         banned: resp.is_banned
       },
       badges: 
-        resp.badges.map(b => {
-          return { 
-            name: b.name,
-            description: b.text,
-            url: b.url,
-            created_at: b.created_utc
-          }
+        resp.badges.map(badge => {
+          return new (require("./badge.js"))(badge);
         }),
     }
-  }
-
-  static formatData(format) {
-    return new User()._fetchData(format);
   }
 
   /**
@@ -86,11 +75,11 @@ class User {
 
     let posts = [];
     
-    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/listing`, options: { page: options.page || 1 } || {} });
+    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/listing`, options: { page: options && options.page ? options.page : 1 } });
     if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
 
     for await (let post of resp.data) {
-      posts.push(await Post.formatData(post));
+      posts.push(new Post(post));
     }
 
     return posts;
@@ -117,11 +106,11 @@ class User {
 
     let comments = [];
 
-    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/comments`, options: { page: options.page || 1 } || {} });
-    if (options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
+    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/comments`, options: { page: options && options.page ? options.page : 1 } });
+    if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
     
     for await (let comment of resp.data) {
-      comments.push(await Comment.formatData(comment));
+      comments.push(new Comment(comment));
     }
 
     return comments;

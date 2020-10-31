@@ -8,7 +8,7 @@
     <a href="https://www.npmjs.com/package/ruqqus-js"><img src="https://img.shields.io/npm/v/ruqqus-js.svg?maxAge=3600" alt="NPM Version" /></a>
     <a href="https://www.npmjs.com/package/ruqqus-js"><img src="https://img.shields.io/npm/dt/ruqqus-js.svg?maxAge=3600" alt="NPM Downloads" /></a>
     <a href="https://david-dm.org/acikek/ruqqus-js"><img src="https://img.shields.io/david/acikek/ruqqus-js.svg?maxAge=3600" alt="License" /></a>
-    <a href="https://github.com/acikek/ruqqus-js/blob/master/LICENSE"><img src="https://img.shields.io/github/license/acikek/ruqqus-js" alt="Build status" /></a>
+    <a href="https://github.com/acikek/ruqqus-js/blob/master/LICENSE"><img src="https://img.shields.io/github/license/acikek/ruqqus-js" alt="Build Status" /></a>
   </p>
   <p>
     <a href="https://nodei.co/npm/ruqqus-js/"><img src="https://nodei.co/npm/ruqqus-js.png?downloads=true" alt="NPM Install Info" /></a>
@@ -97,7 +97,7 @@ const client = new Ruqqus.Client({
 });
 
 client.on("ready", () => {
-  console.log(`Logged in as ${client.user.data.username}!`);
+  console.log(`Logged in as ${client.user.username}!`);
 });
 ```
 

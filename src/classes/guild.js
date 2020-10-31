@@ -2,13 +2,11 @@ const Client = require("./client.js");
 const { OAuthWarning, OAuthError } = require("./error.js");
 
 class Guild {
-  constructor(name) {
-    this.name = name;
+  constructor(data) {
+    Object.assign(this, Guild.formatData(data));
   }
 
-  async _fetchData(format) {
-    let resp = format || await Client.APIRequest({ type: "GET", path: `guild/${this.name}` });
-
+  static formatData(resp) {
     if (!resp.id) return undefined;
 
     return {
@@ -23,7 +21,9 @@ class Guild {
       link: resp.permalink,
       full_link: `https://ruqqus.com${resp.permalink}`,
       subscribers: resp.subscriber_count,
-      guildmasters: resp.mods_count,
+      guildmasters: resp.guildmasters.map(mod => {
+        return new (require("./user.js"))(mod);
+      }),
       icon_url: resp.profile_url.startsWith("/assets") ? `https://ruqqus.com/${resp.profile_url}` : resp.profile_url,
       banner_url: resp.banner_url.startsWith("/assets") ? `https://ruqqus.com/${resp.banner_url}` : resp.banner_url,
       created_at: resp.created_utc,
@@ -34,10 +34,6 @@ class Guild {
         age_restricted: resp.over_18
       }
     }
-  }
-
-  static formatData(format) {
-    return new Guild()._fetchData(format);
   }
   
   /**
@@ -124,7 +120,7 @@ class Guild {
     if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
     
     for await (let post of resp.data) {
-      posts.push(await Post.formatData(post));
+      posts.push(new Post(post));
     }
 
     return posts;
@@ -151,11 +147,11 @@ class Guild {
 
     let comments = [];
 
-    let resp = await Client.APIRequest({ type: "GET", path: `guild/${this.name}/comments`, options: { page: options.page || 1 } || {} });
+    let resp = await Client.APIRequest({ type: "GET", path: `guild/${this.name}/comments`, options: { page: options && options.page ? options.page : 1 } });
     if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
     
     for await (let comment of resp.data) {
-      comments.push(await Comment.formatData(comment));
+      comments.push(new Comment(comment));
     }
 
     return comments;

@@ -3,6 +3,7 @@ const chalk = require("chalk");
 const { EventEmitter } = require("events");
 
 const { OAuthWarning, OAuthError } = require("./error.js");
+const SubmissionCache = require("./cache.js");
 const config = require("../util/config.js");
 
 class Client extends EventEmitter {
@@ -52,13 +53,6 @@ class Client extends EventEmitter {
 
     this.startTime = 0;
     this.online = false,
-
-    this.cache = {
-      _postCount: 0,
-      posts: [],
-      _commentCount: 0,
-      comments: []
-    };
 
     this._refreshToken();
     this._checkEvents();
@@ -144,9 +138,9 @@ class Client extends EventEmitter {
 
         if (!this.online) {
           if (Client.scopes.identity) {
-            this.user.data = await this.user.fetchData();
+            this.user = new (require("./user.js"))(await Client.APIRequest({ type: "GET", path: "identity" }));
           } else {
-            this.user.data = undefined;
+            this.user = undefined;
             new OAuthWarning({
               message: 'Missing "Identity" Scope',
               warning: "Client user data will be undefined!"
@@ -181,17 +175,18 @@ class Client extends EventEmitter {
         .then((resp) => {
           if (resp.error) return;
 
-          resp.data.forEach(async post => {
-            if (this.cache.posts.indexOf(post.id) > -1) return;
-            this.cache.posts.push(post.id);
+          resp.data.forEach(async p => {
+            if (this.posts.cache.get(p.id)) return;
+
+            let post = new (require("./post.js"))(p);
+            this.posts.cache.push(post);
             
-            if (this.cache._postCount != 0) {
-              const Post = require("./post.js");
-              this.emit("post", new Post(post.id), await Post.formatData(post));
+            if (this.posts.cache._count != 0) {
+              this.emit("post", post);
             }
           });
 
-          this.cache._postCount++;
+          this.posts.cache._count++;
         });
     }
 
@@ -202,17 +197,18 @@ class Client extends EventEmitter {
         .then((resp) => {
           if (resp.error) return;
 
-          resp.data.forEach(async comment => {
-            if (this.cache.comments.indexOf(comment.id) > -1) return;
-            this.cache.comments.push(comment.id);
+          resp.data.forEach(async c => {
+            if (this.comments.cache.get(c.id)) return;
+
+            let comment = new (require("./comment.js"))(c);
+            this.comments.cache.push(comment);
             
-            if (this.cache._commentCount != 0) {
-              const Comment = require("./comment.js");
-              this.emit("comment", new Comment(comment.id), await Comment.formatData(comment));
+            if (this.comments.cache._count != 0) {
+              this.emit("comment", comment);
             }
           });
 
-          this.cache._commentCount++;
+          this.comments.cache._count++;
         });
     }
   }
@@ -226,52 +222,16 @@ class Client extends EventEmitter {
   get uptime() {
     return Math.floor((Date.now() - this.startTime) / 1000);
   }
-
-  user = {
-    data: {},
-
-    /**
-     * Fetches the data from the Client user.
-     * 
-     * @returns {Object} The user data.
-     */
-
-    async fetchData() {
-      if (!Client.scopes.identity) {
-        new OAuthError({
-          message: 'Missing "Identity" Scope',
-          code: 401
-        }); return;
-      }
-
-      let resp = await Client.APIRequest({ type: "GET", path: "identity" });
-      let data = (require("./user.js")).formatData(resp);
-
-      this.data = data;
-      return data;
-    }
-  }
   
   guilds = {
     /**
-     * Gets a guild with the specified name.
+     * Fetches a guild with the specified name.
      * 
      * @param {String} name The guild name.
-     * @returns {Guild}
+     * @returns {Guild} The guild object.
      */
 
-    get(name) {
-      return new (require("./guild.js"))(name);
-    },
-
-    /**
-     * Fetches the data from a guild with the specified name.
-     * 
-     * @param {String} name The guild name.
-     * @returns {Object} The guild data.
-     */
-
-    async fetchData(name) {
+    async fetch(name) {
       if (!Client.scopes.read) {
         new OAuthError({
           message: 'Missing "Read" Scope',
@@ -279,7 +239,7 @@ class Client extends EventEmitter {
         }); return;
       }
 
-      return await new (require("./guild.js"))(name)._fetchData();
+      return new (require("./guild.js"))(await Client.APIRequest({ type: "GET", path: `guild/${name}` }));
     },
 
     /**
@@ -299,24 +259,13 @@ class Client extends EventEmitter {
 
   posts = {
     /**
-     * Gets a post with the specified ID.
+     * Fetches a post with the specified ID.
      * 
      * @param {String} id The post ID.
-     * @returns {Post}
+     * @returns {Post} The post object.
      */
 
-    get(id) {
-      return new (require("./post.js"))(id);
-    },
-
-    /**
-     * Fetches the data from a post with the specified ID.
-     * 
-     * @param {String} id The post ID.
-     * @returns {Object} The post data.
-     */
-
-    async fetchData(id) {
+    async fetch(id) {
       if (!Client.scopes.read) {
         new OAuthError({
           message: 'Missing "Read" Scope',
@@ -324,30 +273,24 @@ class Client extends EventEmitter {
         }); return;
       }
 
-      return await new (require("./post.js"))(id)._fetchData();
-    }
+      let post = new (require("./post.js"))(await Client.APIRequest({ type: "GET", path: `post/${id}` }));
+
+      this.cache.push(post);
+      return post;
+    },
+
+    cache: new SubmissionCache()
   }
 
   comments = {
     /**
-     * Gets a comment with the specified ID.
+     * Fetches a comment with the specified ID.
      * 
      * @param {String} id The comment ID.
-     * @returns {Comment}
+     * @returns {Comment} The comment object.
      */
 
-    get(id) {
-      return new (require("./comment.js"))(id);
-    },
-
-    /**
-     * Fetches the data from a comment with the specified ID.
-     * 
-     * @param {String} id The comment ID. 
-     * @returns {Object} The post data.
-     */
-
-    async fetchData(id) {
+    async fetch(id) {
       if (!Client.scopes.read) {
         new OAuthError({
           message: 'Missing "Read" Scope',
@@ -355,30 +298,24 @@ class Client extends EventEmitter {
         }); return;
       }
 
-      return await new (require("./comment.js"))(id)._fetchData();
-    }
+      let comment = new (require("./comment.js"))(await Client.APIRequest({ type: "GET", path: `comment/${id}` }));
+
+      this.cache.push(comment);
+      return comment;
+    },
+
+    cache: new SubmissionCache()
   }
 
   users = {
     /**
-     * Gets a user with the specified username.
+     * Fetches a user with the specified username.
      * 
      * @param {String} username The user's name.
-     * @returns {User}
+     * @returns {User} The user object.
      */
 
-    get(username) {
-      return new (require("./user.js"))(username);
-    },
-
-    /**
-     * Fetches the data from a user with the specified username.
-     * 
-     * @param {String} username The user's name.
-     * @returns {Object} The user data.
-     */
-
-    async fetchData(username) {
+    async fetch(username) {
       if (!Client.scopes.read) {
         new OAuthError({
           message: 'Missing "Read" Scope',
@@ -386,7 +323,7 @@ class Client extends EventEmitter {
         }); return;
       }
 
-      return await new (require("./user.js"))(username)._fetchData();
+      return new (require("./user.js"))(await Client.APIRequest({ type: "GET", path: `user/${username}` }));
     },
 
     /**
