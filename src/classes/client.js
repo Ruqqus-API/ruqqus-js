@@ -26,11 +26,11 @@ class Client extends EventEmitter {
     let cfg = config.get();
 
     options = cfg ? {
-      id: cfg.keys.id || "",
-      token: cfg.keys.token || "",
+      id: options.id || cfg.id || "",
+      token: options.token || cfg.token || "",
       code: options.code || "",
-      agent: cfg.agent || null,
-      refresh: cfg.refresh || null,
+      agent: options.agent || cfg.agent || null,
+      refresh: options.refresh || cfg.refresh || null,
     } : options;
 
     Client.keys = {
@@ -97,21 +97,17 @@ class Client extends EventEmitter {
   }
   
   _refreshToken() {
-    if (!config.get()) {
-      config.regenerate();
-    } else if (config.get("autosave") === true && config.get("refresh") && config.get("refresh") != " ") {
-      Client.keys.refresh.refresh_token = config.get("refresh");
-    }
-
     Client.APIRequest({ type: "POST", path: "https://ruqqus.com/oauth/grant", options: Client.keys.refresh.refresh_token ? Client.keys.refresh : Client.keys.code })
       .then(async (resp) => {
         if (resp.oauth_error) {
           let type;
 
-          if (resp.oauth_error.startsWith("Invalid refresh_token")) {
+          if (resp.oauth_error == "Invalid refresh_token") {
             type = "Refresh Token";
-          } else if (resp.oauth_error.startsWith("Invalid code")) {
+          } else if (resp.oauth_error == "Invalid code") {
             type = "Authcode";
+          } else if (resp.oauth_error == "Invalid `client_id` or `client_secret`") {
+            type = "ID or Client Secret"
           }
 
           return new OAuthError({
@@ -125,7 +121,7 @@ class Client extends EventEmitter {
           Client.scopes[s] = true;
         });
 
-        if (config.get("autosave") === true && resp.refresh_token) {
+        if (config.get("autosave") === true && (!config.get("refresh") || config.get("refresh") == " ") && resp.refresh_token) {
           config.set("refresh", resp.refresh_token);
         }
 

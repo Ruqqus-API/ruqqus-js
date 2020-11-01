@@ -12,9 +12,8 @@ function update(obj) {
  * 
  * @param {Object} options The config parameters.
  * @param {Boolean} [options.autosave=true] Whether or not the refresh token should be automatically saved for restarts.
- * @param {Object} [options.keys] The Application parameters.
- * @param {String} [options.keys.id] The Application ID.
- * @param {String} [options.keys.token] The Application secret. 
+ * @param {String} [options.id] The Application ID.
+ * @param {String} [options.token] The Application secret. 
  * @param {String} [options.agent] Custom `user_agent`.
  * @param {String} [options.refresh] Refresh token. Overrides authorization code.
  */
@@ -24,10 +23,8 @@ function config(options) {
 
   let obj = options ? {
     autosave: options.autosave || cfg.autosave || true,
-    keys: options.keys ? {
-      id: options.keys.id || cfg.keys.id || "",
-      token: options.keys.token || cfg.keys.token || ""
-    } : {},
+    id: options.id || cfg.id || "",
+    token: options.token || cfg.token || "",
     agent: options.agent || cfg.agent || "",
     refresh: options.refresh || cfg.refresh || ""
   } : {};
@@ -38,26 +35,6 @@ function config(options) {
     new OAuthError({
       message: "No Config Provided",
       code: 405
-    });
-  }
-}
-
-/**
- * Regenerates the config file.
- */
-
-config.regenerate = function() {
-  try {
-    fs.accessSync(path);
-  } catch (e) {
-    update({ 
-      autosave: null,
-      keys: {
-        id: "",
-        token: ""
-      },
-      agent: "",
-      refresh: ""
     });
   }
 }
@@ -77,7 +54,6 @@ config.get = function(attribute) {
     if (attribute) return config[attribute];
     else return config;
   } catch (e) {
-    config.regenerate();
     return undefined;
   }
 }

@@ -1,9 +1,7 @@
 {
   "autosave": true,
-  "keys": {
-    "id": "",
-    "token": ""
-  },
+  "id": "",
+  "token": "",
   "agent": "",
   "refresh": ""
 }
