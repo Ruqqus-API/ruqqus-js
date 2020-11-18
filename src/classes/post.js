@@ -40,6 +40,7 @@ class Post {
         deleted: resp.is_deleted,
         nsfw: resp.is_nsfw,
         nsfl: resp.is_nsfl,
+        offensive: resp.is_offensive,
         edited: resp.edited_utc > 0,
         yanked: resp.original_guild ? true : false
       },

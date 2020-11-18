@@ -15,7 +15,7 @@ class Client extends EventEmitter {
    * @param {String} options.token The Application secret.
    * @param {String} options.code The one-time use authorization code.
    * @param {String} [options.agent] Custom `user_agent`.
-   * @param {String} [options.refresh] Refresh token. Overrides authorization code.
+   * @param {String} [options.refresh] The refresh token. Overrides authorization code.
    * @constructor
    */
 
@@ -35,16 +35,16 @@ class Client extends EventEmitter {
 
     Client.keys = {
       code: {
-        client_id: options.id,
-        client_secret: options.token,
-        grant_type: "code",
+        id: options.id,
+        token: options.token,
+        type: "code",
         code: options.code,
       },
       refresh: {
-        client_id: options.id,
-        client_secret: options.token,
-        grant_type: "refresh",
-        refresh_token: options.refresh || null
+        id: options.id,
+        token: options.token,
+        type: "refresh",
+        refresh: options.refresh || null
       }
     };
 
@@ -97,7 +97,7 @@ class Client extends EventEmitter {
   }
   
   _refreshToken() {
-    Client.APIRequest({ type: "POST", path: "https://ruqqus.com/oauth/grant", options: Client.keys.refresh.refresh_token ? Client.keys.refresh : Client.keys.code })
+    require("../tokens.js")(Client.keys.refresh.refresh ? Client.keys.refresh : Client.keys.code)
       .then(async (resp) => {
         if (resp.oauth_error) {
           let type;

@@ -78,7 +78,7 @@ console.log(getAuthURL({
   state: "STATE_TOKEN",
   scopes: "SCOPE_LIST",
   permanent: true
-});
+}));
 ```
 
 ### Completing the Setup

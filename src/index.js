@@ -15,7 +15,8 @@
 const Client = require("./classes/client.js");
 const { OAuthWarning, OAuthError } = require("./classes/error.js");
 const { getAuthURL, getAuthURLInput } = require("./url.js");
+const fetchTokens = require("./tokens.js");
 const { version } = require("./version.js");
 const config = require("./util/config.js");
 
-module.exports = { Client, OAuthWarning, OAuthError, getAuthURL, getAuthURLInput, version, config };
+module.exports = { Client, OAuthWarning, OAuthError, getAuthURL, getAuthURLInput, fetchTokens, version, config };
