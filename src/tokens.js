@@ -32,7 +32,7 @@ async function fetchTokens(options) {
     }); return;
   }
 
-  let resp = await Client.APIRequest({ type: "POST", path: "https://ruqqus.com/oauth/grant", options: keys });
+  let resp = await Client.APIRequest({ type: "POST", path: "https://ruqqus.com/oauth/grant", options: keys, auth: false });
 
   if (resp.oauth_error) {
     let type;

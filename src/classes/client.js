@@ -64,6 +64,7 @@ class Client extends EventEmitter {
    * @param {Object} options The request parameters.
    * @param {String} options.type The request method.
    * @param {String} options.path The request endpoint.
+   * @param {Object} [options.auth=true] Whether or not the endpoint needs authorization keys.
    * @param {Object} [options.options={}] Extra request options.
    * @returns {Object} The request response body.
    */
@@ -76,15 +77,17 @@ class Client extends EventEmitter {
         code: 405
       }); return;
     }
+    
+    if (options.auth == undefined) options.auth = true;
 
-    let resp = await needle(options.type, options.path.startsWith("https://ruqqus.com/") ? options.path : `https://ruqqus.com/api/v1/${options.path.toLowerCase()}`, options.options || {}, { 
+    let resp = await needle(options.type, options.path.startsWith("https://ruqqus.com/") ? options.path : `https://ruqqus.com/api/v1/${options.path.toLowerCase()}`, options.options || {}, options.auth ? { 
       user_agent: Client.userAgent, 
       headers: { 
         Authorization: `Bearer ${Client.keys.refresh.access_token}`, 
         "X-User-Type": "Bot",
         "X-Library": "ruqqus-js",
         "X-Supports": "auth",
-      } });
+      } } : {});
 
     if (resp.body.error && resp.body.error.startsWith("405")) {
       new OAuthError({
