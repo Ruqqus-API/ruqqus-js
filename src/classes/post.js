@@ -41,6 +41,7 @@ class Post {
         nsfw: resp.is_nsfw,
         nsfl: resp.is_nsfl,
         offensive: resp.is_offensive,
+        political: resp.is_politics,
         edited: resp.edited_utc > 0,
         yanked: resp.original_guild ? true : false
       },
