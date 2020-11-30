@@ -10,7 +10,7 @@ class Post {
     if (!resp.id) return undefined;
 
     return {
-      author: new (require("./user.js"))(resp.author),
+      author_username: resp.author_name, // This is ridiculous.
       content: {
         title: resp.title,
         body: {

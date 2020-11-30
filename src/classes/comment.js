@@ -10,7 +10,7 @@ class Comment {
     if (!resp.id) return undefined;
     
     return {
-      author: new (require("./user.js"))(resp.author),
+      author_username: resp.author_name, // This is ridiculous.
       content: {
         text: resp.body,
         html: resp.body_html
@@ -24,7 +24,7 @@ class Comment {
       full_id: resp.fullname,
       link: resp.permalink,
       full_link: `https://ruqqus.com${resp.permalink}`,
-      parent_id: resp.parent_id,
+      parent: new Comment(resp.parent),
       created_at: resp.created_utc,
       edited_at: resp.edited_utc,
       chain_level: resp.level,
