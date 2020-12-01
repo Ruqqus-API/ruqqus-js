@@ -2,8 +2,8 @@ const Client = require("./client.js");
 const { OAuthError } = require("./error.js");
 
 class Comment {
-  constructor(data) {
-    Object.assign(this, Comment.formatData(data));
+  constructor(data, parent) {
+    if (!parent) Object.assign(this, Comment.formatData(data));
   }
 
   static formatData(resp) {
@@ -24,7 +24,7 @@ class Comment {
       full_id: resp.fullname,
       link: resp.permalink,
       full_link: `https://ruqqus.com${resp.permalink}`,
-      parent: new Comment(resp.parent),
+      parent: new (require("./parent.js"))(resp.parent),
       created_at: resp.created_utc,
       edited_at: resp.edited_utc,
       chain_level: resp.level,
