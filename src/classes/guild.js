@@ -21,9 +21,9 @@ class Guild {
       link: resp.permalink,
       full_link: `https://ruqqus.com${resp.permalink}`,
       subscribers: resp.subscriber_count,
-      guildmasters: resp.guildmasters.map(mod => {
+      guildmasters: resp.guildmasters, /*.map(mod => {
         return new (require("./user.js"))(mod);
-      }),
+      }),*/
       icon_url: resp.profile_url.startsWith("/assets") ? `https://ruqqus.com/${resp.profile_url}` : resp.profile_url,
       banner_url: resp.banner_url.startsWith("/assets") ? `https://ruqqus.com/${resp.banner_url}` : resp.banner_url,
       created_at: resp.created_utc,
