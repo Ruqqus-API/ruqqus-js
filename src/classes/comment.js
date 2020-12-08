@@ -1,47 +1,7 @@
 const Client = require("./client.js");
 const { OAuthError } = require("./error.js");
 
-class Comment {
-  constructor(data, parent) {
-    if (!parent) Object.assign(this, Comment.formatData(data));
-  }
-
-  static formatData(resp) {
-    if (!resp.id) return undefined;
-    
-    return {
-      author_username: resp.author_name, // This is ridiculous.
-      content: {
-        text: resp.body,
-        html: resp.body_html
-      },
-      votes: {
-        score: resp.score,
-        upvotes: resp.upvotes,
-        downvotes: resp.downvotes
-      },
-      id: resp.id,
-      full_id: resp.fullname,
-      link: resp.permalink,
-      full_link: `https://ruqqus.com${resp.permalink}`,
-      parent: new (require("./parent.js"))(resp.parent),
-      created_at: resp.created_utc,
-      edited_at: resp.edited_utc,
-      chain_level: resp.level,
-      awards: resp.award_count,
-      flags: {
-        archived: resp.is_archived,
-        banned: resp.is_banned,
-        deleted: resp.is_deleted,
-        nsfw: resp.is_nsfw,
-        nsfl: resp.is_nsfl,
-        offensive: resp.is_offensive,
-        edited: resp.edited_utc > 0
-      },
-      post: new (require("./post.js"))(resp.post)
-    }
-  }
-
+class CommentBase {
   /**
    * Submits a reply to the comment.
    * 
@@ -139,4 +99,92 @@ class Comment {
   }
 }
 
-module.exports = Comment;
+class Comment extends CommentBase {
+  constructor(data) {
+    super();
+    Object.assign(this, Comment.formatData(data));
+  }
+
+  static formatData(resp) {
+    if (!resp.id) return undefined;
+    
+    return {
+      author: new (require("./user")).UserCore(resp.author),
+      content: {
+        text: resp.body,
+        html: resp.body_html
+      },
+      votes: {
+        score: resp.score,
+        upvotes: resp.upvotes,
+        downvotes: resp.downvotes
+      },
+      id: resp.id,
+      full_id: resp.fullname,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      parent: new CommentCore(resp.parent[0]),
+      created_at: resp.created_utc,
+      edited_at: resp.edited_utc,
+      chain_level: resp.level,
+      awards: resp.award_count,
+      flags: {
+        archived: resp.is_archived,
+        banned: resp.is_banned,
+        deleted: resp.is_deleted,
+        nsfw: resp.is_nsfw,
+        nsfl: resp.is_nsfl,
+        offensive: resp.is_offensive,
+        bot: resp.is_bot,
+        edited: resp.edited_utc > 0
+      },
+      post: new (require("./post.js")).PostCore(resp.post),
+      guild: new (require("./guild.js")).GuildCore(resp.guild)
+    }
+  }
+}
+
+class CommentCore extends CommentBase {
+  constructor(data) {
+    super();
+    Object.assign(this, CommentCore.formatData(data));
+  }
+
+  static formatData(resp) {
+    if (!resp.id) return undefined;
+    
+    return {
+      author_name: resp.author_name,
+      content: {
+        text: resp.body,
+        html: resp.body_html
+      },
+      votes: {
+        score: resp.score,
+        upvotes: resp.upvotes,
+        downvotes: resp.downvotes
+      },
+      id: resp.id,
+      full_id: resp.fullname,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      parent_id: resp.parent_comment_id,
+      created_at: resp.created_utc,
+      edited_at: resp.edited_utc,
+      chain_level: resp.level,
+      awards: resp.award_count,
+      flags: {
+        archived: resp.is_archived,
+        banned: resp.is_banned,
+        deleted: resp.is_deleted,
+        nsfw: resp.is_nsfw,
+        nsfl: resp.is_nsfl,
+        offensive: resp.is_offensive,
+        bot: resp.is_bot,
+        edited: resp.edited_utc > 0
+      }
+    }
+  }
+}
+
+module.exports = { CommentBase, Comment, CommentCore };

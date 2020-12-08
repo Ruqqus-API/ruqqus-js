@@ -137,7 +137,7 @@ class Client extends EventEmitter {
 
         if (!this.online) {
           if (Client.scopes.identity) {
-            this.user = new (require("./user.js"))(await Client.APIRequest({ type: "GET", path: "identity" }));
+            this.user = new (require("./user.js")).User(await Client.APIRequest({ type: "GET", path: "identity" }));
           } else {
             this.user = undefined;
             new OAuthWarning({
@@ -177,7 +177,7 @@ class Client extends EventEmitter {
           resp.data.forEach(async p => {
             if (this.posts.cache.get(p.id)) return;
 
-            let post = new (require("./post.js"))(p);
+            let post = new (require("./post.js")).Post(p);
             this.posts.cache.push(post);
             
             if (this.posts.cache._count != 0) {
@@ -199,7 +199,7 @@ class Client extends EventEmitter {
           resp.data.forEach(async c => {
             if (this.comments.cache.get(c.id)) return;
 
-            let comment = new (require("./comment.js"))(c);
+            let comment = new (require("./comment.js")).Comment(c);
             this.comments.cache.push(comment);
             
             if (this.comments.cache._count != 0) {
@@ -238,7 +238,7 @@ class Client extends EventEmitter {
         }); return;
       }
 
-      return new (require("./guild.js"))(await Client.APIRequest({ type: "GET", path: `guild/${name}` }));
+      return new (require("./guild.js")).Guild(await Client.APIRequest({ type: "GET", path: `guild/${name}` }));
     },
 
     /**
@@ -272,7 +272,7 @@ class Client extends EventEmitter {
         }); return;
       }
 
-      let post = new (require("./post.js"))(await Client.APIRequest({ type: "GET", path: `post/${id}` }));
+      let post = new (require("./post.js")).Post(await Client.APIRequest({ type: "GET", path: `post/${id}` }));
 
       this.cache.push(post);
       return post;
@@ -297,7 +297,7 @@ class Client extends EventEmitter {
         }); return;
       }
 
-      let comment = new (require("./comment.js"))(await Client.APIRequest({ type: "GET", path: `comment/${id}` }));
+      let comment = new (require("./comment.js")).Comment(await Client.APIRequest({ type: "GET", path: `comment/${id}` }));
 
       this.cache.push(comment);
       return comment;
@@ -322,7 +322,7 @@ class Client extends EventEmitter {
         }); return;
       }
 
-      return new (require("./user.js"))(await Client.APIRequest({ type: "GET", path: `user/${username}` }));
+      return new (require("./user.js")).User(await Client.APIRequest({ type: "GET", path: `user/${username}` }));
     },
 
     /**

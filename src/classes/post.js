@@ -1,55 +1,7 @@
 const Client = require("./client.js");
 const { OAuthError } = require("./error.js");
 
-class Post {
-  constructor(data) {
-    Object.assign(this, Post.formatData(data));
-  }
-  
-  static formatData(resp) {
-    if (!resp.id) return undefined;
-
-    return {
-      author_username: resp.author_name, // This is ridiculous.
-      content: {
-        title: resp.title,
-        body: {
-          text: resp.body,
-          html: resp.body_html
-        },
-        domain: resp.domain,
-        url: resp.url,
-        thumbnail: resp.thumb_url,
-        embed: resp.embed_url
-      },
-      votes: {
-        score: resp.score,
-        upvotes: resp.upvotes,
-        downvotes: resp.downvotes,
-        voted: resp.voted
-      },
-      id: resp.id,
-      full_id: resp.fullname,
-      link: resp.permalink,
-      full_link: `https://ruqqus.com${resp.permalink}`,
-      created_at: resp.created_utc,
-      edited_at: resp.edited_utc,
-      flags: {
-        archived: resp.is_archived,
-        banned: resp.is_banned,
-        deleted: resp.is_deleted,
-        nsfw: resp.is_nsfw,
-        nsfl: resp.is_nsfl,
-        offensive: resp.is_offensive,
-        political: resp.is_politics,
-        edited: resp.edited_utc > 0,
-        yanked: resp.original_guild ? true : false
-      },
-      guild_name: resp.guild_name,
-      original_guild: resp.original_guild ? new (require("./guild.js"))(resp.original_guild) : null // Actual brainlet moment
-    }
-  }
-
+class PostBase {
   /**
    * Submits a comment to the post.
    * 
@@ -187,4 +139,110 @@ class Post {
   }
 }
 
-module.exports = Post;
+class Post extends PostBase {
+  constructor(data) {
+    super();
+    Object.assign(this, Post.formatData(data));
+  }
+
+  static formatData(resp) {
+    if (!resp.id) return undefined;
+
+    return {
+      author: new (require("./user.js")).UserCore(resp.author),
+      content: {
+        title: resp.title,
+        body: {
+          text: resp.body,
+          html: resp.body_html
+        },
+        domain: resp.domain,
+        url: resp.url,
+        thumbnail: resp.thumb_url,
+        embed: resp.embed_url
+      },
+      votes: {
+        score: resp.score,
+        upvotes: resp.upvotes,
+        downvotes: resp.downvotes,
+        voted: resp.voted
+      },
+      id: resp.id,
+      full_id: resp.fullname,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      created_at: resp.created_utc,
+      edited_at: resp.edited_utc,
+      comments: resp.comment_count,
+      awards: resp.award_count,
+      flags: {
+        archived: resp.is_archived,
+        banned: resp.is_banned,
+        deleted: resp.is_deleted,
+        nsfw: resp.is_nsfw,
+        nsfl: resp.is_nsfl,
+        offensive: resp.is_offensive,
+        political: resp.is_politics,
+        edited: resp.edited_utc > 0,
+        yanked: resp.original_guild ? true : false
+      },
+      guild: new (require("./guild.js")).GuildCore(resp.guild),
+      original_guild: resp.original_guild ? new (require("./guild.js")).GuildCore(resp.original_guild) : null
+    }
+  }
+}
+
+class PostCore extends PostBase {
+  constructor(data) {
+    super();
+    Object.assign(this, PostCore.formatData(data));
+  }
+
+  static formatData(resp) {
+    if (!resp.id) return undefined;
+
+    return {
+      author_name: resp.author_name,
+      content: {
+        title: resp.title,
+        body: {
+          text: resp.body,
+          html: resp.body_html
+        },
+        domain: resp.domain,
+        url: resp.url,
+        thumbnail: resp.thumb_url,
+        embed: resp.embed_url
+      },
+      votes: {
+        score: resp.score,
+        upvotes: resp.upvotes,
+        downvotes: resp.downvotes,
+        voted: resp.voted
+      },
+      id: resp.id,
+      full_id: resp.fullname,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      created_at: resp.created_utc,
+      edited_at: resp.edited_utc,
+      comments: resp.comment_count,
+      awards: resp.award_count,
+      flags: {
+        archived: resp.is_archived,
+        banned: resp.is_banned,
+        deleted: resp.is_deleted,
+        nsfw: resp.is_nsfw,
+        nsfl: resp.is_nsfl,
+        offensive: resp.is_offensive,
+        political: resp.is_politics,
+        edited: resp.edited_utc > 0,
+        yanked: resp.original_guild ? true : false
+      },
+      guild_name: resp.guild_name,
+      original_guild: resp.original_guild_name
+    }
+  }
+}
+
+module.exports = { PostBase, Post, PostCore };

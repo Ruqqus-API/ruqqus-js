@@ -1,41 +1,7 @@
 const Client = require("./client.js");
 const { OAuthWarning, OAuthError } = require("./error.js");
 
-class Guild {
-  constructor(data) {
-    Object.assign(this, Guild.formatData(data));
-  }
-
-  static formatData(resp) {
-    if (!resp.id) return undefined;
-
-    return {
-      name: resp.name,
-      description: {
-        text: resp.description,
-        html: resp.description_html
-      },
-      color: resp.color,
-      id: resp.id,
-      full_id: resp.fullname,
-      link: resp.permalink,
-      full_link: `https://ruqqus.com${resp.permalink}`,
-      subscribers: resp.subscriber_count,
-      guildmasters: resp.guildmasters, /*.map(mod => {
-        return new (require("./user.js"))(mod);
-      }),*/
-      icon_url: resp.profile_url.startsWith("/assets") ? `https://ruqqus.com/${resp.profile_url}` : resp.profile_url,
-      banner_url: resp.banner_url.startsWith("/assets") ? `https://ruqqus.com/${resp.banner_url}` : resp.banner_url,
-      created_at: resp.created_utc,
-      flags: {
-        banned: resp.is_banned,
-        private: resp.is_private,
-        restricted: resp.is_restricted,
-        age_restricted: resp.over_18
-      }
-    }
-  }
-  
+class GuildBase {  
   /**
    * Submits a post to the guild.
    * 
@@ -99,7 +65,7 @@ class Guild {
    */
 
   async fetchPosts(options) {
-    const Post = require("./post.js");
+    const { Post } = require("./post.js");
 
     if (!Client.scopes.read) {
       new OAuthError({
@@ -136,7 +102,7 @@ class Guild {
    */
 
   async fetchComments(options) {
-    const Comment = require("./comment.js");
+    const { Comment } = require("./comment.js");
 
     if (!Client.scopes.read) {
       new OAuthError({
@@ -158,4 +124,76 @@ class Guild {
   }
 }
 
-module.exports = Guild;
+class Guild extends GuildBase {
+  constructor(data) {
+    super();
+    Object.assign(this, Guild.formatData(data));
+  }
+
+  static formatData(resp) {
+    if (!resp.id) return undefined;
+
+    return {
+      name: resp.name,
+      description: {
+        text: resp.description,
+        html: resp.description_html
+      },
+      color: resp.color,
+      id: resp.id,
+      full_id: resp.fullname,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      subscribers: resp.subscriber_count,
+      guildmasters: resp.guildmasters.map(mod => {
+        return new (require("./user.js")).UserCore(mod);
+      }),
+      icon_url: resp.profile_url.startsWith("/assets") ? `https://ruqqus.com/${resp.profile_url}` : resp.profile_url,
+      banner_url: resp.banner_url.startsWith("/assets") ? `https://ruqqus.com/${resp.banner_url}` : resp.banner_url,
+      created_at: resp.created_utc,
+      flags: {
+        banned: resp.is_banned,
+        private: resp.is_private,
+        restricted: resp.is_restricted,
+        age_restricted: resp.over_18,
+        siege_protected: resp.is_siege_protected
+      }
+    }
+  }
+}
+
+class GuildCore extends GuildBase {
+  constructor(data) {
+    super();
+    Object.assign(this, GuildCore.formatData(data));
+  }
+
+  static formatData(resp) {
+    if (!resp.id) return undefined;
+
+    return {
+      name: resp.name,
+      description: {
+        text: resp.description,
+        html: resp.description_html
+      },
+      color: resp.color,
+      id: resp.id,
+      full_id: resp.fullname,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      icon_url: resp.profile_url.startsWith("/assets") ? `https://ruqqus.com/${resp.profile_url}` : resp.profile_url,
+      banner_url: resp.banner_url.startsWith("/assets") ? `https://ruqqus.com/${resp.banner_url}` : resp.banner_url,
+      created_at: resp.created_utc,
+      flags: {
+        banned: resp.is_banned,
+        private: resp.is_private,
+        restricted: resp.is_restricted,
+        age_restricted: resp.over_18,
+        siege_protected: resp.is_siege_protected
+      }
+    }
+  }
+}
+
+module.exports = { GuildBase, Guild, GuildCore };
