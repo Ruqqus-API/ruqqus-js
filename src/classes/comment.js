@@ -123,7 +123,7 @@ class Comment extends CommentBase {
       full_id: resp.fullname,
       link: resp.permalink,
       full_link: `https://ruqqus.com${resp.permalink}`,
-      parent: new CommentCore(resp.parent),
+      parent: resp.parent || new CommentCore(resp.parent),
       created_at: resp.created_utc,
       edited_at: resp.edited_utc,
       chain_level: resp.level,

@@ -174,16 +174,20 @@ class Client extends EventEmitter {
         .then((resp) => {
           if (resp.error) return;
 
-          resp.data.forEach(async p => {
-            if (this.posts.cache.get(p.id)) return;
+          try {
+            resp.data.forEach(async p => {
+              if (this.posts.cache.get(p.id)) return;
 
-            let post = new (require("./post.js")).Post(p);
-            this.posts.cache.push(post);
-            
-            if (this.posts.cache._count != 0) {
-              this.emit("post", post);
-            }
-          });
+              let post = new (require("./post.js")).Post(p);
+              this.posts.cache.push(post);
+              
+              if (this.posts.cache._count != 0) {
+                this.emit("post", post);
+              }
+            });
+          } catch (e) {
+            // WIP - Proper error handling
+          }
 
           this.posts.cache._count++;
         });
@@ -196,16 +200,20 @@ class Client extends EventEmitter {
         .then((resp) => {
           if (resp.error) return;
 
-          resp.data.forEach(async c => {
-            if (this.comments.cache.get(c.id)) return;
+          try {
+            resp.data.forEach(async c => {
+              if (this.comments.cache.get(c.id)) return;
 
-            let comment = new (require("./comment.js")).Comment(c);
-            this.comments.cache.push(comment);
-            
-            if (this.comments.cache._count != 0) {
-              this.emit("comment", comment);
-            }
-          });
+              let comment = new (require("./comment.js")).Comment(c);
+              this.comments.cache.push(comment);
+              
+              if (this.comments.cache._count != 0) {
+                this.emit("comment", comment);
+              }
+            });
+          } catch (e) {
+            // WIP - Proper error handling
+          }
 
           this.comments.cache._count++;
         });
