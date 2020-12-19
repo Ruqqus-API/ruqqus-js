@@ -23,7 +23,7 @@ class UserBase {
 
     let posts = [];
     
-    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/listing`, options: { page: options && options.page ? options.page : 1 } });
+    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/listing`, options: { page: options && options.page ? options.page : 1 } }); if (resp.error) return;
     if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
 
     for await (let post of resp.data) {
@@ -54,7 +54,7 @@ class UserBase {
 
     let comments = [];
 
-    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/comments`, options: { page: options && options.page ? options.page : 1 } });
+    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/comments`, options: { page: options && options.page ? options.page : 1 } }); if (resp.error) return;
     if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
     
     for await (let comment of resp.data) {
