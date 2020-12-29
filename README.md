@@ -90,14 +90,16 @@ If you did everything correctly, the URL should take you to an Authorization pag
 ```js
 const Ruqqus = require("ruqqus-js");
 
-const client = new Ruqqus.Client({
-  id: "CLIENT_ID",
-  token: "CLIENT_SECRET",
-  code: "AUTHCODE"
-});
+const client = new Ruqqus.Client();
 
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.username}!`);
+});
+
+client.login({
+  id: "CLIENT_ID",
+  token: "CLIENT_SECRET",
+  code: "AUTHCODE"
 });
 ```
 
