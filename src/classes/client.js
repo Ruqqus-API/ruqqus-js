@@ -1,21 +1,21 @@
-const needle = require("needle");
-const chalk = require("chalk");
 const { EventEmitter } = require("events");
 
-const { OAuthWarning, OAuthError } = require("./error.js");
-const SubmissionCache = require("./cache.js");
-const config = require("../util/config.js");
+const { GuildManager } = require("./guild.js");
+const { PostManager } = require("./post.js");
+const { CommentManager } = require("./comment.js");
+const { User, BannedUser, DeletedUser, UserManager } = require("./user.js");
+
+const APIRequest = require("../util/api-request.js");
+const Config = require("../util/config.js");
+const { ScopeError } = require("./error.js");
 
 class Client extends EventEmitter {
   /**
    * Creates a new ruqqus-js Client instance.
    * 
-   * @param {Object} options The Application parameters, including the authorization code.
-   * @param {String} options.id The Application ID. 
-   * @param {String} options.token The Application secret.
-   * @param {String} options.code The one-time use authorization code.
+   * @param {Object} [options] The client options.
+   * @param {String} [options.path] Path to a config file.
    * @param {String} [options.agent] Custom `user_agent`.
-   * @param {String} [options.refresh] The refresh token. Overrides authorization code.
    * @constructor
    */
 
@@ -23,39 +23,25 @@ class Client extends EventEmitter {
     super();
 
     if (!options) options = {};
-    let cfg = config.get();
+    if (options.path) this.config = new Config(options.path);
 
-    options = cfg ? {
-      id: options.id || cfg.id || "",
-      token: options.token || cfg.token || "",
-      code: options.code || "",
-      agent: options.agent || cfg.agent || null,
-      refresh: options.refresh || cfg.refresh || null,
-    } : options;
-
-    Client.keys = {
-      code: {
-        id: options.id,
-        token: options.token,
-        type: "code",
-        code: options.code,
-      },
-      refresh: {
-        id: options.id,
-        token: options.token,
-        type: "refresh",
-        refresh: options.refresh || null
-      }
-    };
-
-    Client.scopes = {};
-    Client.userAgent = options.agent || `ruqqus-js@${options.id}`;
+    this.user_agent = options.agent || this.config.get("agent") || `ruqqus-js@${options.id}`;
 
     this.startTime = 0;
     this.online = false,
+    this.user = undefined;
 
-    this._refreshToken();
-    this._checkEvents();
+    this.scopes = {
+      identity: false,
+      create: false,
+      read: false,
+      update: false,
+      delete: false,
+      vote: false,
+      guildmaster: false
+    };
+
+    this._timeouts = new Set();
   }
 
   /**
@@ -68,123 +54,60 @@ class Client extends EventEmitter {
    * @param {Object} [options.options={}] Extra request options.
    * @returns {Object} The request response body.
    */
-  
-  static async APIRequest(options) {
-    let methods = [ "GET", "POST" ];
-    if (!options.type || !options.path || !methods.includes(options.type.toUpperCase())) {
-      new OAuthError({
-        message: "Invalid Request",
-        code: 405
-      }); return;
-    }
-    
-    if (options.auth == undefined) options.auth = true;
 
-    let resp = await needle(options.type, options.path.startsWith("https://ruqqus.com/") ? options.path : `https://ruqqus.com/api/v1/${options.path.toLowerCase()}`, options.options || {}, options.auth ? { 
-      user_agent: Client.userAgent, 
-      headers: { 
-        Authorization: `Bearer ${Client.keys.refresh.access_token}`, 
-        "X-User-Type": "Bot",
-        "X-Library": "ruqqus-js",
-        "X-Supports": "auth",
-      } } : {});
-
-    if (resp.body.error && resp.body.error.startsWith("405")) {
-      new OAuthError({
-        message: "Method Not Allowed",
-        code: 405
-      }); return;
-    }
-    
-    return resp.body;
+  async APIRequest(options) {
+    return await APIRequest(options, this);
   }
   
   _refreshToken() {
-    require("../tokens.js")(Client.keys.refresh.refresh ? Client.keys.refresh : Client.keys.code)
-      .then(async (resp) => {
-        if (resp.oauth_error) {
-          let type;
-
-          if (resp.oauth_error == "Invalid refresh_token") {
-            type = "Refresh Token";
-          } else if (resp.oauth_error == "Invalid code") {
-            type = "Authcode";
-          } else if (resp.oauth_error == "Invalid `client_id` or `client_secret`") {
-            type = "ID or Client Secret"
-          }
-
-          return new OAuthError({
-            message: `Invalid ${type}`,
-            code: 401,
-            fatal: true
-          });
-        }
-
+    require("../util/tokens.js")(this.keys.refresh.refresh ? this.keys.refresh : this.keys.code)
+      .then(async resp => {
         resp.scopes.split(",").forEach(s => {
-          Client.scopes[s] = true;
+          this.scopes[s] = true;
         });
 
-        if (config.get("autosave") === true && (!config.get("refresh") || config.get("refresh") == " ") && resp.refresh_token) {
-          config.set("refresh", resp.refresh_token);
+        if (this.config && this.config.get("autosave") === true && (!this.config.get("refresh") || this.config.get("refresh") == " ") && resp.refresh_token) {
+          this.config.set("refresh", resp.refresh_token);
         }
 
-        Client.keys.refresh.refresh_token = resp.refresh_token || null;
-        Client.keys.refresh.access_token = resp.access_token;
-        let refreshIn = (resp.expires_at - 5) * 1000 - Date.now()
+        this.keys.refresh.refresh = resp.refresh_token || null;
+        this.keys.refresh.access_token = resp.access_token;
         
-        console.log(`${chalk.greenBright("SUCCESS!")} Token Acquired!\nNext refresh in: ${chalk.yellow(`${Math.floor(refreshIn / 1000)} seconds`)} ${chalk.blueBright(`(${new Date((resp.expires_at - 10) * 1000).toLocaleTimeString("en-US")})`)}`);
-        setTimeout(() => { this._refreshToken() }, refreshIn);
+        const timer = setTimeout(() => { this._refreshToken() }, (resp.expires_at * 1000) - Date.now());
+        this._timeouts.add(timer);
 
         if (!this.online) {
-          if (Client.scopes.identity) {
-            this.user = new (require("./user.js")).User(await Client.APIRequest({ type: "GET", path: "identity" }));
+          if (this.scopes.identity) {
+            let user = await this.APIRequest({ type: "GET", path: "identity" });
+            this.user = user.is_banned ? new BannedUser(user) : user.is_deleted ? new DeletedUser(user) : new User(user, this);
           } else {
-            this.user = undefined;
-            new OAuthWarning({
-              message: 'Missing "Identity" Scope',
-              warning: "Client user data will be undefined!"
-            });
+            throw new ScopeError(`Missing "identity" scope; user data ignored`);
           }
-
-          let latest = await needle("GET", "https://registry.npmjs.org/ruqqus-js"); latest = Object.keys(latest.body.time); latest = latest[latest.length - 1];
-          if (require("../version.js").version != latest) new OAuthWarning({
-            message: `Outdated Version (${require(`../version.js`).version})`,
-            warning: "Some features may be deprecated!"
-          });
-
-          if (!Client.scopes.read) new OAuthWarning({
-            message: 'Missing "Read" Scope',
-            warning: "Post and Comment events will not be emitted!"
-          });
 
           this.startTime = Date.now();
           this.emit("login");
           this.online = true;
         }
-      }).catch(e => console.error(e));
+      }).catch(e => {
+        console.error(e);
+        process.exit();
+      });
   }
 
   _checkEvents() {
-    setTimeout(() => { this._checkEvents() }, 10000);
+    const timer = setTimeout(() => { this._checkEvents() }, 10000);
+    this._timeouts.add(timer);
     
-    if (this.eventNames().includes("post")) {
-      if (!Client.scopes.read) return;
-
-      Client.APIRequest({ type: "GET", path: "all/listing", options: { sort: "new" } })
-        .then((resp) => {
-          if (resp.error) return;
-
+    if (this.eventNames().includes("post") && this.scopes.read) {
+      this.guilds.all.fetchPosts({ cache: false, ignore_pinned: true })
+        .then(posts => {
           try {
-            resp.data.forEach(async p => {
-              if (this.posts.cache.get(p.id)) return;
-
-              let post = new (require("./post.js")).Post(p);
-              this.posts.cache.push(post);
-              
-              if (this.posts.cache._count != 0) {
-                this.emit("post", post);
-              }
+            posts.forEach(async post => {
+              if (this.posts.cache.get(post.id)) return;              
+              if (this.posts.cache._count != 0) this.emit("post", post);
             });
+
+            this.posts.cache.add(posts);
           } catch (e) {
             // WIP - Proper error handling
           }
@@ -193,24 +116,16 @@ class Client extends EventEmitter {
         });
     }
 
-    if (this.eventNames().includes("comment")) {
-      if (!Client.scopes.read) return;
-      
-      Client.APIRequest({ type: "GET", path: "front/comments", options: { sort: "new" } })
-        .then((resp) => {
-          if (resp.error) return;
-
+    if (this.eventNames().includes("comment") && this.scopes.read) {      
+      this.guilds.all.fetchComments({ cache: false })
+        .then(comments => {
           try {
-            resp.data.forEach(async c => {
-              if (this.comments.cache.get(c.id)) return;
-
-              let comment = new (require("./comment.js")).Comment(c);
-              this.comments.cache.push(comment);
-              
-              if (this.comments.cache._count != 0) {
-                this.emit("comment", comment);
-              }
+            comments.forEach(async comment => {
+              if (this.comments.cache.get(comment.id)) return;
+              if (this.comments.cache._count != 0) this.emit("comment", comment);
             });
+
+            this.comments.cache.add(comments);
           } catch (e) {
             // WIP - Proper error handling
           }
@@ -230,122 +145,60 @@ class Client extends EventEmitter {
     return Math.floor((Date.now() - this.startTime) / 1000);
   }
   
-  guilds = {
-    /**
-     * Fetches a guild with the specified name.
-     * 
-     * @param {String} name The guild name.
-     * @returns {Guild} The guild object.
-     */
+  guilds = new GuildManager(this)
+  posts = new PostManager(this)
+  comments = new CommentManager(this)
+  users = new UserManager(this)
 
-    async fetch(name) {
-      if (!Client.scopes.read) {
-        new OAuthError({
-          message: 'Missing "Read" Scope',
-          code: 401
-        }); return;
+  /**
+   * Logs into Ruqqus as a user.
+   * 
+   * @param {Object} keys The Application parameters, including the authorization code.
+   * @param {String} keys.id The Application ID. 
+   * @param {String} keys.token The Application secret.
+   * @param {String} keys.code The one-time use authorization code.
+   * @param {String} [keys.refresh] The refresh token. Overrides authorization code.
+   */
+
+  login(keys) {
+    if (!keys) keys = {};
+    let cfg = this.config ? this.config.get() : null;
+
+    keys = cfg ? {
+      id: keys.id || cfg.id || "",
+      token: keys.token || cfg.token || "",
+      code: keys.code || "",
+      refresh: keys.refresh || cfg.refresh || null,
+    } : options;
+
+    this.keys = {
+      code: {
+        id: keys.id,
+        token: keys.token,
+        type: "code",
+        code: keys.code,
+      },
+      refresh: {
+        id: keys.id,
+        token: keys.token,
+        type: "refresh",
+        refresh: keys.refresh || null,
+        access_token: ""
       }
+    };
 
-      return new (require("./guild.js")).Guild(await Client.APIRequest({ type: "GET", path: `guild/${name}` }));
-    },
-
-    /**
-     * Fetches whether or not a guild with the specified name is available.
-     * 
-     * @param {String} name The guild name.
-     * @returns {Boolean}
-     */
-
-    async isAvailable(name) {
-      if (!name) return undefined;
-      let resp = await Client.APIRequest({ type: "GET", path: `board_available/${name}` });
-
-      return resp.available;
-    }
+    this._refreshToken();
+    this._checkEvents();
   }
 
-  posts = {
-    /**
-     * Fetches a post with the specified ID.
-     * 
-     * @param {String} id The post ID.
-     * @returns {Post} The post object.
-     */
+  /**
+   * Logs out and terminates connection to the user.
+   */
 
-    async fetch(id) {
-      if (!Client.scopes.read) {
-        new OAuthError({
-          message: 'Missing "Read" Scope',
-          code: 401
-        }); return;
-      }
-
-      let post = new (require("./post.js")).Post(await Client.APIRequest({ type: "GET", path: `post/${id}` }));
-
-      this.cache.push(post);
-      return post;
-    },
-
-    cache: new SubmissionCache()
-  }
-
-  comments = {
-    /**
-     * Fetches a comment with the specified ID.
-     * 
-     * @param {String} id The comment ID.
-     * @returns {Comment} The comment object.
-     */
-
-    async fetch(id) {
-      if (!Client.scopes.read) {
-        new OAuthError({
-          message: 'Missing "Read" Scope',
-          code: 401
-        }); return;
-      }
-
-      let comment = new (require("./comment.js")).Comment(await Client.APIRequest({ type: "GET", path: `comment/${id}` }));
-
-      this.cache.push(comment);
-      return comment;
-    },
-
-    cache: new SubmissionCache()
-  }
-
-  users = {
-    /**
-     * Fetches a user with the specified username.
-     * 
-     * @param {String} username The user's name.
-     * @returns {User} The user object.
-     */
-
-    async fetch(username) {
-      if (!Client.scopes.read) {
-        new OAuthError({
-          message: 'Missing "Read" Scope',
-          code: 401
-        }); return;
-      }
-
-      return new (require("./user.js")).User(await Client.APIRequest({ type: "GET", path: `user/${username}` }));
-    },
-
-    /**
-     * Fetches whether or not a user with the specified username is available.
-     * 
-     * @param {String} username The user's name.
-     * @returns {Boolean}
-     */
-    
-    async isAvailable(username) {
-      if (!username) return undefined;
-      let resp = await Client.APIRequest({ type: "GET", path: `is_available/${username}` });
-
-      return Object.values(resp)[0];
-    }
+  destroy() {
+    for (const t of this._timeouts) clearTimeout(t);
+    this._timeouts.clear();
+    this.keys = null;
   }
 }
 

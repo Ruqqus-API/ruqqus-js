@@ -3,6 +3,7 @@
   "version": "3.5.3",
   "description": "A Node.js wrapper of the Ruqqus API; designed for Ruqqus Applications.",
   "main": "src/index.js",
+  "types": "src/typings/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -25,7 +26,6 @@
   },
   "homepage": "https://github.com/acikek/ruqqus-js#readme",
   "dependencies": {
-    "chalk": "^4.1.0",
     "needle": "^2.5.0"
   }
 }

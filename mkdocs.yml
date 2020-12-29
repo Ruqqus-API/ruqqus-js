@@ -1,0 +1,42 @@
+site_name: ruqqus-js
+theme:
+  name: material
+  logo: src/images/icon.png
+  features:
+    - navigation: instant
+    - navigation.sections
+    - navigation.tabs
+  font:
+    text: Inter
+    code: Oxygen Mono
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - toc:
+      permalink: true
+  - admonition
+  - footnotes
+  - pymdownx.details
+  - pymdownx.superfences
+plugins:
+  - search
+  - macros:
+      module_name: docs/src/macros
+  - awesome-pages
+extra_css:
+  - src/stylesheets/palette.css
+  - src/stylesheets/extension.css
+repo_url: https://github.com/acikek/ruqqus-js
+repo_name: acikek/ruqqus-js
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/acikek
+    - icon: fontawesome/brands/reddit-alien
+      link: https://reddit.com/u/Acies05
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/vKxS53ZqPP
+copyright: Copyright &copy; 2020 Kyle Prince

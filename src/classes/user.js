@@ -1,35 +1,30 @@
-const Client = require("./client.js");
-const { OAuthError } = require("./error.js");
+const { ScopeError } = require("./error.js");
 
 class UserBase {
+  constructor(client) {
+    Object.defineProperty(this, "client", { value: client });
+  }
+
   /**
    * Fetches an array of post objects from the user.
    * 
    * @param {Object} [options] The post sorting parameters.
    * @param {Number} [options.page=1] The page index to fetch posts from.
-   * @param {Number} [options.limit=24] The amount of post objects to return.
+   * @param {Boolean} [cache=true] Whether or not the posts should be cached.
    * @returns {Array} The post objects.
    */
 
   async fetchPosts(options) {
-    const { Post } = require("./post.js");
-
-    if (!Client.scopes.read) {
-      new OAuthError({
-        message: 'Missing "Read" Scope',
-        code: 401
-      }); return;
-    }
-
-    let posts = [];
+    if (!this.client.scopes.read) throw new ScopeError(`Missing "read" scope`);
     
-    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/listing`, options: { page: options && options.page ? options.page : 1 } }); if (resp.error) return;
-    if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
+    let resp = await this.client.APIRequest({ type: "GET", path: `user/${this.username}/listing`, options: { 
+      page: options && options.page || 1 
+    } }); if (resp.error) return;
 
-    for await (let post of resp.data) {
-      posts.push(new Post(post));
-    }
+    const { Post } = require("./post.js");
+    let posts = resp.data.map(post => new Post(post, this.client));
 
+    if (!options || options.cache !== false) this.client.posts.cache.add(posts);
     return posts;
   }
 
@@ -38,59 +33,33 @@ class UserBase {
    * 
    * @param {Object} [options] The comment sorting parameters.
    * @param {Number} [options.page=1] The page index to fetch comments from.
-   * @param {Number} [options.limit=24] The amount of comment objects to return.
+   * @param {Boolean} [cache=true] Whether or not the posts should be cached.
    * @returns {Array} The comment objects.
    */
 
   async fetchComments(options) {
+    if (!this.client.scopes.read) throw new ScopeError(`Missing "read" scope`);
+
+    let resp = await this.client.APIRequest({ type: "GET", path: `user/${this.username}/comments`, options: { 
+      page: options && options.page || 1 
+    } }); if (resp.error) return;
+
     const { Comment } = require("./comment.js");
+    let comments = resp.data.map(comment => new Comment(comment, this.client));
 
-    if (!Client.scopes.read) {
-      new OAuthError({
-        message: 'Missing "Read" Scope',
-        code: 401
-      }); return;
-    }
-
-    let comments = [];
-
-    let resp = await Client.APIRequest({ type: "GET", path: `user/${this.username}/comments`, options: { page: options && options.page ? options.page : 1 } }); if (resp.error) return;
-    if (options && options.limit) resp.data.splice(options.limit, resp.data.length - options.limit);
-    
-    for await (let comment of resp.data) {
-      comments.push(new Comment(comment));
-    }
-
+    if (!options || options.cache !== false) this.client.comments.cache.add(comments);
     return comments;
   }
 }
 
 class User extends UserBase {
-  constructor(data) {
-    super();
+  constructor(data, client) {
+    super(client);
     Object.assign(this, User.formatData(data));
   }
 
   static formatData(resp) {
     if (!resp.id) return undefined;
-
-    if (resp.is_banned) {
-      return {
-        username: resp.username,
-        id: resp.id,
-        link: resp.permalink,
-        full_link: `https://ruqqus.com${resp.permalink}`,
-        ban_reason: resp.ban_reason,
-      }
-    } else if (resp.is_deleted) {
-      return {
-        username: resp.username,
-        id: resp.id,
-        link: resp.permalink,
-        full_link: `https://ruqqus.com${resp.permalink}`,
-        deleted: true
-      }
-    }
     
     return {
       username: resp.username,
@@ -131,32 +100,14 @@ class User extends UserBase {
 }
 
 class UserCore extends UserBase {
-  constructor(data) {
-    super();
+  constructor(data, client) {
+    super(client);
     Object.assign(this, UserCore.formatData(data));
   }
 
   static formatData(resp) {
     if (!resp.id) return undefined;
 
-    if (resp.is_banned) {
-      return {
-        username: resp.username,
-        id: resp.id,
-        link: resp.permalink,
-        full_link: `https://ruqqus.com${resp.permalink}`,
-        ban_reason: resp.ban_reason,
-      }
-    } else if (resp.is_deleted) {
-      return {
-        username: resp.username,
-        id: resp.id,
-        link: resp.permalink,
-        full_link: `https://ruqqus.com${resp.permalink}`,
-        deleted: true
-      }
-    }
-    
     return {
       username: resp.username,
       title: resp.title ? {
@@ -168,10 +119,6 @@ class UserCore extends UserBase {
       bio: {
         text: resp.bio,
         html: resp.bio_html
-      },
-      stats: {
-        posts: resp.post_count,
-        comments: resp.comment_count,
       },
       id: resp.id,
       full_id: `t1_${resp.id}`,
@@ -189,4 +136,88 @@ class UserCore extends UserBase {
   }
 }
 
-module.exports = { UserBase, User, UserCore }
+class BannedUser {
+  constructor(data) {
+    Object.assign(this, DeletedUser.formatData(data));
+  }
+
+  static formatData(resp) {
+    if (!resp.id) return undefined;
+    
+    return {
+      username: resp.username,
+      id: resp.id,
+      full_id: `t1_${resp.id}`,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      ban_reason: resp.ban_reason,
+      flags: {
+        banned: true
+      }
+    }
+  }
+}
+
+class DeletedUser {
+  constructor(data) {
+    Object.assign(this, DeletedUser.formatData(data));
+  }
+
+  static formatData(resp) {
+    if (!resp.id) return undefined;
+
+    return {
+      username: resp.username,
+      id: resp.id,
+      full_id: `t1_${resp.id}`,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      flags: {
+        deleted: true
+      }
+    }
+  }
+}
+
+class UserManager {
+  constructor(client) {
+    Object.defineProperty(this, "client", { value: client });
+  }
+
+  /**
+   * Fetches a user with the specified username.
+   * 
+   * @param {String} username The user's name.
+   * @returns {User} The user object.
+   */
+
+  async fetch(username) {
+    if (!this.client.scopes.read) throw new ScopeError(`Missing "read" scope`);
+
+    let resp = await this.client.APIRequest({ type: "GET", path: `user/${username}` });
+
+    if (resp.is_banned) {
+      return new BannedUser(resp);
+    } else if (resp.is_deleted) {
+      return new DeletedUser(resp);
+    } else {
+      return new User(resp, this.client);
+    }
+  }
+
+  /**
+   * Fetches whether or not a user with the specified username is available.
+   * 
+   * @param {String} username The user's name.
+   * @returns {Boolean}
+   */
+  
+  async isAvailable(username) {
+    if (!username) return undefined;
+    let resp = await this.client.APIRequest({ type: "GET", path: `is_available/${username}` });
+
+    return Object.values(resp)[0];
+  }
+}
+
+module.exports = { UserBase, User, UserCore, BannedUser, DeletedUser, UserManager }

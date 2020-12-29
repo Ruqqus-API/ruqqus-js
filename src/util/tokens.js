@@ -1,5 +1,5 @@
-const Client = require("./classes/client.js");
-const { OAuthError } = require("./classes/error.js");
+const APIRequest = require("./api-request.js");
+const { OAuthError } = require("../classes/error.js");
 
 /**
  * Requests the access and refresh tokens through OAuth.
@@ -26,31 +26,11 @@ async function fetchTokens(options) {
     keys.grant_type = "refresh";
     keys.refresh_token = options.refresh || null;
   } else {
-    new OAuthError({
-      message: "Invalid Request",
-      code: 405
-    }); return;
+    throw new OAuthError("Invalid grant type", 405)
   }
 
-  let resp = await Client.APIRequest({ type: "POST", path: "https://ruqqus.com/oauth/grant", options: keys, auth: false });
-
-  if (resp.oauth_error) {
-    let type;
-
-    if (resp.oauth_error == "Invalid refresh_token") {
-      type = "Refresh Token";
-    } else if (resp.oauth_error == "Invalid code") {
-      type = "Authcode";
-    } else if (resp.oauth_error == "Invalid `client_id` or `client_secret`") {
-      type = "ID or Client Secret"
-    }
-
-    new OAuthError({
-      message: `Invalid ${type}`,
-      code: 401,
-      fatal: true
-    }); return;
-  }
+  let resp = await APIRequest({ type: "POST", path: "https://ruqqus.com/oauth/grant", options: keys, auth: false });
+  if (resp.oauth_error) throw new OAuthError(resp.oauth_error, 401);
 
   return resp;
 }

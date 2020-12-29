@@ -14,6 +14,15 @@ class SubmissionCache {
     if (!data.id) return;
     this.cache[data.id] = data;
   }
+
+  add(data) {
+    if (!Array.isArray(data)) return;
+
+    data.forEach(s => {
+      if (!s.id) return;
+      this.cache[s.id] = s;
+    });
+  }
   
   /**
    * Gets a submission from the cache.

@@ -56,7 +56,7 @@ To acquire an authcode, you will need to generate a Ruqqus OAuth2 URL.
 
 #### Manual URL Generation
 
-Start with https://ruqqus.com/oauth/authorize and add the following URL parameters:
+Start with `https://ruqqus.com/oauth/authorize` and add the following URL parameters:
 
 - `client_id` - Your application's Client ID
 - `redirect_uri` - The redirect URI (or one of the URIs) specified in your application information. Must not use HTTP unless using localhost (use HTTPS - 

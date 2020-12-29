@@ -1,78 +1,50 @@
-const Client = require("./client.js");
-const { OAuthError } = require("./error.js");
+const SubmissionCache = require("./cache.js");
+const { ScopeError, RuqqusAPIError } = require("./error.js");
 
 class PostBase {
+  constructor(client) {
+    Object.defineProperty(this, "client", { value: client });
+  }
+
   /**
    * Submits a comment to the post.
    * 
    * @param {String} body The body of the comment.
    */
 
-  comment(body) {
-    if (!Client.scopes.create) { 
-      new OAuthError({
-        message: 'Missing "Create" Scope',
-        code: 401
-      }); return;
-    }
+  async comment(body) {
+    if (!this.client.scopes.create) throw new ScopeError(`Missing "create" scope`);
+    if (!body || body == " ") throw new RuqqusAPIError("Cannot provide an empty comment body");
 
-    if (!body || body == " ") return new OAuthError({
-      message: "No Comment Body Provided!",
-      code: 405
-    });
-
-    Client.APIRequest({ type: "POST", path: "comment", options: { parent_fullname: `t2_${this.id}`, body: body } });
+    let resp = await this.client.APIRequest({ type: "POST", path: "comment", options: { parent_fullname: `t2_${this.id}`, body: body } });
+    return new (require("./comment.js")).Comment(resp, this.client);
   }
 
   /**
    * Upvotes the post.
-   * 
-   * @deprecated
    */
 
   upvote() {
-    if (!Client.scopes.vote) { 
-      new OAuthError({
-        message: 'Missing "Vote" Scope',
-        code: 401
-      }); return;
-    }
-
-    Client.APIRequest({ type: "POST", path: `vote/post/${this.id}/1` });
+    if (!this.client.scopes.vote) throw new ScopeError(`Missing "vote" scope`);
+    this.client.APIRequest({ type: "POST", path: `vote/post/${this.id}/1` });
   }
   
   /**
    * Downvotes the post.
-   * 
-   * @deprecated
    */
 
   downvote() {
-    if (!Client.scopes.vote) {
-      new OAuthError({
-        message: 'Missing "Vote" Scope',
-        code: 401
-      }); return;
-    }
-
-    Client.APIRequest({ type: "POST", path: `vote/post/${this.id}/-1` });
+    if (!this.client.scopes.vote) throw new ScopeError(`Missing "vote" scope`);
+    this.client.APIRequest({ type: "POST", path: `vote/post/${this.id}/-1` });
   }
 
   /**
    * Removes the client's vote from the post.
-   * 
-   * @deprecated
    */
 
   removeVote() {
-    if (!Client.scopes.vote) {
-      new OAuthError({
-        message: 'Missing "Vote" Scope',
-        code: 401
-      }); return;
-    }
-
-    Client.APIRequest({ type: "POST", path: `vote/post/${this.id}/0` });
+    if (!this.client.scopes.vote) throw new ScopeError(`Missing "vote" scope`);
+    this.client.APIRequest({ type: "POST", path: `vote/post/${this.id}/0` });
   }
 
   /**
@@ -80,20 +52,8 @@ class PostBase {
    */
 
   delete() {
-    if (!Client.scopes.delete) {
-      new OAuthError({
-        message: 'Missing "Delete" Scope',
-        code: 401 
-      }); return;
-    }
-    
-    Client.APIRequest({ type: "POST", path: `delete_post/${this.id}` })
-      .then((resp) => {
-        if (resp.error) new OAuthError({
-          message: "Post Deletion Failed",
-          code: 403
-        });
-      });
+    if (!this.client.scopes.delete) throw new ScopeError(`Missing "delete" scope`);
+    this.client.APIRequest({ type: "POST", path: `delete_post/${this.id}` });
   }
 
   /**
@@ -101,20 +61,8 @@ class PostBase {
    */
 
   toggleNSFW() {
-    if (!Client.scopes.update) {
-      new OAuthError({
-        message: 'Missing "Update" Scope',
-        code: 401 
-      }); return;
-    }
-
-    Client.APIRequest({ type: "POST", path: `toggle_post_nsfw/${this.id}` })
-      .then((resp) => {
-        if (resp.error) new OAuthError({
-          message: "Post Update Failed",
-          code: 403
-        });
-      });
+    if (!this.client.scopes.update) throw new ScopeError(`Missing "update" scope`);
+    this.client.APIRequest({ type: "POST", path: `toggle_post_nsfw/${this.id}` });
   }
 
   /**
@@ -122,34 +70,26 @@ class PostBase {
    */
 
   toggleNSFL() {
-    if (!Client.scopes.update) {
-      new OAuthError({
-        message: 'Missing "Update" Scope',
-        code: 401 
-      }); return;
-    }
-
-    Client.APIRequest({ type: "POST", path: `toggle_post_nsfl/${this.id}` })
-      .then((resp) => {
-        if (resp.error) new OAuthError({
-          message: "Post Update Failed",
-          code: 403
-        });
-      });
+    if (!this.client.scopes.update) throw new ScopeError(`Missing "update" scope`);
+    this.client.APIRequest({ type: "POST", path: `toggle_post_nsfl/${this.id}` });
   }
 }
 
 class Post extends PostBase {
-  constructor(data) {
-    super();
-    Object.assign(this, Post.formatData(data));
+  constructor(data, client) {
+    super(client);
+    Object.assign(this, Post.formatData(data, client));
   }
 
-  static formatData(resp) {
+  static formatData(resp, client) {
     if (!resp.id) return undefined;
 
+    const { UserCore, BannedUser, DeletedUser } = require("./user.js");
+    const { GuildCore, BannedGuild } = require("./guild.js");
+
     return {
-      author: new (require("./user.js")).UserCore(resp.author),
+      author: resp.author.is_banned ? new BannedUser(resp.author) : 
+              resp.author.is_deleted ? new DeletedUser(resp.author) : new UserCore(resp.author, client),
       content: {
         title: resp.title,
         body: {
@@ -186,15 +126,15 @@ class Post extends PostBase {
         edited: resp.edited_utc > 0,
         yanked: resp.original_guild ? true : false
       },
-      guild: new (require("./guild.js")).GuildCore(resp.guild),
-      original_guild: resp.original_guild ? new (require("./guild.js")).GuildCore(resp.original_guild) : null
+      guild: resp.guild.is_banned ? new BannedGuild(resp.guild) : new GuildCore(resp.guild, client),
+      original_guild: resp.original_guild ? (resp.original_guild.is_banned ? new BannedGuild(resp.original_guild) : new GuildCore(resp.original_guild, client)) : null
     }
   }
 }
 
 class PostCore extends PostBase {
-  constructor(data) {
-    super();
+  constructor(data, client) {
+    super(client);
     Object.assign(this, PostCore.formatData(data));
   }
 
@@ -240,9 +180,33 @@ class PostCore extends PostBase {
         yanked: resp.original_guild ? true : false
       },
       guild_name: resp.guild_name,
-      original_guild: resp.original_guild_name
+      original_guild_name: resp.original_guild_name
     }
   }
 }
 
-module.exports = { PostBase, Post, PostCore };
+class PostManager {
+  constructor(client) {
+    Object.defineProperty(this, "client", { value: client });
+  }
+
+  /**
+   * Fetches a post with the specified ID.
+   * 
+   * @param {String} id The post ID.
+   * @returns {Post} The post object.
+   */
+
+  async fetch(id) {
+    if (!this.client.scopes.read) throw new ScopeError(`Missing "read" scope`);
+
+    let post = new Post(await this.client.APIRequest({ type: "GET", path: `post/${id}` }), this.client);
+
+    this.cache.push(post);
+    return post;
+  }
+
+  cache = new SubmissionCache()
+}
+
+module.exports = { PostBase, Post, PostCore, PostManager };
