@@ -215,6 +215,7 @@ class All extends GuildBase {
 class GuildManager {
   constructor(client) {
     Object.defineProperty(this, "client", { value: client });
+    this.all = new All(client);
   }
 
   /**
@@ -249,8 +250,6 @@ class GuildManager {
 
     return resp.available;
   }
-
-  all = new All(this.client);
 }
 
 module.exports = { GuildBase, Guild, GuildCore, BannedGuild, All, GuildManager };
