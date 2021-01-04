@@ -14,6 +14,7 @@ declare module "ruqqus-js" {
 
     private _refreshToken(): void;
     private _checkEvents(): void;
+    private _close(): void;
     public get uptime(): number;
     public APIRequest(options: ClientAPIRequestOptions): Promise<object>;
 
@@ -31,7 +32,10 @@ declare module "ruqqus-js" {
 
     public login(keys?: ClientLoginKeys): void;
     public destroy(): void;
+    public kill(): void;
   }
+
+  function resolveGuild(obj: APIGuildData | APIGuildBaseData | APIBannedGuildData, client: Client, core?: boolean): Guild | GuildCore | BannedGuild;
   
   class GuildBase {
     constructor(client: Client);
@@ -98,6 +102,8 @@ declare module "ruqqus-js" {
     public fetchGuilds(options: GuildFetchOptions): Promise<Guild[]>;
   }
 
+  function resolvePost(obj: APIPostData | APIPostCoreData | APIBannedPostData | APIDeletedPostData, client: Client, core?: boolean): Post | PostCore | BannedPost | DeletedPost;
+
   class PostBase {
     constructor(client: Client);
 
@@ -151,6 +157,33 @@ declare module "ruqqus-js" {
     public original_guild_name?: string;
   }
 
+  class BannedPost {
+    constructor(data: APIBannedPostData);
+    public static formatData(resp: APIBannedPostData): BannedPostData;
+
+    public content: RemovedPostContent;
+    public id: RuqqusID;
+    public full_id: PostID;
+    public link: string;
+    public full_link: string;
+    public ban_reason: string;
+    public flags: RemovedPostFlags;
+  }
+
+  class DeletedPost {
+    constructor(data: APIDeletedPostData);
+    public static formatData(resp: APIDeletedPostData): DeletedPostData;
+
+    public content: RemovedPostContent;
+    public id: RuqqusID;
+    public full_id: PostID;
+    public link: string;
+    public full_link: string;
+    public flags: RemovedPostFlags;
+  }
+
+  function resolveComment(obj: APICommentData | APICommentCoreData | APIBannedCommentData | APIDeletedCommentData, client: Client, core?: boolean): Comment | CommentCore | BannedComment | DeletedComment;
+
   class CommentBase {
     constructor(client: Client);
 
@@ -199,6 +232,33 @@ declare module "ruqqus-js" {
     public awards: number;
     public flags: CommentFlags;
   }
+
+  class BannedComment {
+    constructor(data: APIBannedCommentData);
+    public static formatData(resp: APIBannedCommentData): BannedCommentData;
+
+    public id: RuqqusID;
+    public full_id: CommentID;
+    public link: string;
+    public full_link: string;
+    public parent_id: RuqqusID;
+    public ban_reason: string;
+    public flags: BannedCommentFlags;
+  }
+
+  class DeletedComment {
+    constructor(data: APIDeletedCommentData);
+    public static formatData(resp: APIDeletedCommentData): DeletedCommentData;
+
+    public id: RuqqusID;
+    public full_id: CommentID;
+    public link: string;
+    public full_link: string;
+    public parent_id: RuqqusID;
+    public flags: DeletedCommentFlags;
+  }
+
+  function resolveUser(obj: APIUserData | APIUserBaseData | APIBannedUserData | APIDeletedUserData, client: Client, core?: boolean): User | UserCore | BannedUser | DeletedUser;
 
   class UserBase {
     constructor(client: Client);
@@ -554,6 +614,23 @@ declare module "ruqqus-js" {
     original_guild_name?: string | null;
   }
 
+  interface APIBannedPostData {
+    title: string;
+    id: RuqqusID;
+    permalink: string;
+    ban_reason: string;
+    is_banned: boolean;
+    is_deleted: boolean;
+  }
+
+  interface APIDeletedPostData {
+    title: string;
+    id: RuqqusID;
+    permalink: string;
+    is_banned: boolean;
+    is_deleted: boolean;
+  }
+
   interface PostBody {
     text: string;
     html: string;
@@ -587,6 +664,15 @@ declare module "ruqqus-js" {
     yanked: boolean;
   }
 
+  interface RemovedPostContent {
+    title: string;
+  }
+
+  interface RemovedPostFlags {
+    banned: boolean;
+    deleted: boolean;
+  }
+
   interface PostBaseData {
     content: PostContent;
     votes: PostVotes;
@@ -611,6 +697,25 @@ declare module "ruqqus-js" {
     author_name: string;
     guild_name: string;
     original_guild_name?: string | null;
+  }
+
+  interface BannedPostData {
+    content: RemovedPostContent;
+    id: RuqqusID;
+    full_id: PostID;
+    link: string;
+    full_link: string;
+    ban_reason: string;
+    flags: RemovedPostFlags;
+  }
+
+  interface DeletedPostData {
+    content: RemovedPostContent;
+    id: RuqqusID;
+    full_id: PostID;
+    link: string;
+    full_link: string;
+    flags: RemovedPostFlags;
   }
 
   interface APICommentBaseData {
@@ -646,6 +751,21 @@ declare module "ruqqus-js" {
     author_name: string;
   }
 
+  interface APIBannedCommentData {
+    id: RuqqusID;
+    permalink: string;
+    parent: RuqqusID;
+    ban_reason: string;
+    is_banned: boolean;
+  }
+
+  interface APIDeletedCommentData {
+    id: RuqqusID;
+    permalink: string;
+    parent: RuqqusID;
+    is_deleted: boolean;
+  }
+
   interface CommentContent {
     text: string;
     html: string;
@@ -666,6 +786,14 @@ declare module "ruqqus-js" {
     offensive: boolean;
     bot: boolean;
     edited: boolean;
+  }
+
+  interface BannedCommentFlags {
+    banned: boolean;
+  }
+
+  interface DeletedCommentFlags {
+    deleted: boolean;
   }
 
   interface CommentBaseData {
@@ -690,6 +818,25 @@ declare module "ruqqus-js" {
   
   interface CommentCoreData extends CommentBaseData {
     author_name: string;
+  }
+
+  interface BannedCommentData {
+    id: RuqqusID;
+    full_id: CommentID;
+    link: string;
+    full_link: string;
+    parent_id: RuqqusID;
+    ban_reason: string;
+    flags: BannedCommentFlags;
+  }
+
+  interface DeletedCommentData {
+    id: RuqqusID;
+    full_id: CommentID;
+    link: string;
+    full_link: string;
+    parent_id: RuqqusID;
+    flags: DeletedCommentFlags;
   }
 
   interface APIUserTitle {

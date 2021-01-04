@@ -1,6 +1,16 @@
 const SubmissionCache = require("./cache.js");
 const { ScopeError, RuqqusAPIError } = require("./error.js");
 
+function resolveComment(obj, client, core) {
+  if (obj.is_banned) {
+    return new BannedComment(obj);
+  } else if (obj.is_deleted) {
+    return new DeletedComment(obj);
+  } else {
+    return core ? new CommentCore(obj, client) : new Comment(obj, client);
+  }
+}
+
 class CommentBase {
   constructor(client) {
     Object.defineProperty(this, "client", { value: client });
@@ -66,12 +76,12 @@ class Comment extends CommentBase {
   static formatData(resp, client) {
     if (!resp.id) return undefined;
     
-    const { UserCore, BannedUser, DeletedUser } = require("./user.js");
-    const { GuildCore, BannedGuild } = require("./guild.js");
+    const { resolveUser } = require("./user.js");
+    const { resolvePost } = require("./post.js");
+    const { resolveGuild } = require("./guild.js");
 
     return {
-      author: resp.author.is_banned ? new BannedUser(resp.author) : 
-              resp.author.is_deleted ? new DeletedUser(resp.author) : new UserCore(resp.author, client),
+      author: resolveUser(resp.author, client, true),
       content: {
         text: resp.body,
         html: resp.body_html
@@ -85,11 +95,12 @@ class Comment extends CommentBase {
       full_id: resp.fullname,
       link: resp.permalink,
       full_link: `https://ruqqus.com${resp.permalink}`,
-      parent: resp.parent ? new CommentCore(resp.parent, client) : null,
       created_at: resp.created_utc,
       edited_at: resp.edited_utc,
       chain_level: resp.level,
       awards: resp.award_count,
+      parent: resp.parent ? resolveComment(resp.parent, client, true) : null,
+      replies: resp.replies ? resp.replies.map(reply => resolveComment(reply, client, true)) : null,
       flags: {
         archived: resp.is_archived,
         banned: resp.is_banned,
@@ -100,8 +111,8 @@ class Comment extends CommentBase {
         bot: resp.is_bot,
         edited: resp.edited_utc > 0
       },
-      post: new (require("./post.js")).PostCore(resp.post, client),
-      guild: resp.guild.is_banned ? new BannedGuild(resp.guild) : new GuildCore(resp.guild, client),
+      post: resolvePost(resp.post, client, true),
+      guild: resolveGuild(resp.guild, client, true)
     }
   }
 }
@@ -149,6 +160,49 @@ class CommentCore extends CommentBase {
   }
 }
 
+class BannedComment {
+  constructor(data) {
+    Object.assign(this, BannedComment.formatData(data));
+  }
+
+  static formatData(resp) {
+    if (!resp.id) return undefined;
+    
+    return {
+      id: resp.id,
+      full_id: `t1_${resp.id}`,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      parent_id: resp.parent,
+      ban_reason: resp.ban_reason,
+      flags: {
+        banned: true,
+      }
+    }
+  }
+}
+
+class DeletedComment {
+  constructor(data) {
+    Object.assign(this, DeletedComment.formatData(data));
+  }
+
+  static formatData(resp) {
+    if (!resp.id) return undefined;
+    
+    return {
+      id: resp.id,
+      full_id: `t1_${resp.id}`,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      parent_id: resp.parent,
+      flags: {
+        deleted: true
+      }
+    }
+  }
+}
+
 class CommentManager {
   constructor(client) {
     Object.defineProperty(this, "client", { value: client });
@@ -164,7 +218,8 @@ class CommentManager {
   async fetch(id) {
     if (!this.client.scopes.read) throw new ScopeError(`Missing "read" scope`);
 
-    let comment = new Comment(await this.client.APIRequest({ type: "GET", path: `comment/${id}` }), this.client);
+    let resp = await this.client.APIRequest({ type: "GET", path: `comment/${id}` });
+    let comment = resolveComment(resp, this.client);
 
     this.cache.push(comment);
     return comment;
@@ -173,4 +228,4 @@ class CommentManager {
   cache = new SubmissionCache()
 }
 
-module.exports = { CommentBase, Comment, CommentCore, CommentManager };
+module.exports = { resolveComment, CommentBase, Comment, CommentCore, BannedComment, DeletedComment, CommentManager };

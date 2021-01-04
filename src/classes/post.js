@@ -1,6 +1,16 @@
 const SubmissionCache = require("./cache.js");
 const { ScopeError, RuqqusAPIError } = require("./error.js");
 
+function resolvePost(obj, client, core) {
+  if (obj.is_banned) {
+    return new BannedPost(obj);
+  } else if (obj.is_deleted) {
+    return new DeletedPost(obj);
+  } else {
+    return core ? new PostCore(obj, client) : new Post(obj, client);
+  }
+}
+
 class PostBase {
   constructor(client) {
     Object.defineProperty(this, "client", { value: client });
@@ -84,12 +94,12 @@ class Post extends PostBase {
   static formatData(resp, client) {
     if (!resp.id) return undefined;
 
-    const { UserCore, BannedUser, DeletedUser } = require("./user.js");
-    const { GuildCore, BannedGuild } = require("./guild.js");
+    const { resolveUser } = require("./user.js");
+    const { resolveComment } = require("./comment.js");
+    const { resolveGuild } = require("./guild.js");
 
     return {
-      author: resp.author.is_banned ? new BannedUser(resp.author) : 
-              resp.author.is_deleted ? new DeletedUser(resp.author) : new UserCore(resp.author, client),
+      author: resolveUser(resp.author, client, true),
       content: {
         title: resp.title,
         body: {
@@ -115,6 +125,7 @@ class Post extends PostBase {
       edited_at: resp.edited_utc,
       comments: resp.comment_count,
       awards: resp.award_count,
+      replies: resp.replies ? resp.replies.map(reply => resolveComment(reply, client, true)) : null,
       flags: {
         archived: resp.is_archived,
         banned: resp.is_banned,
@@ -126,8 +137,8 @@ class Post extends PostBase {
         edited: resp.edited_utc > 0,
         yanked: resp.original_guild ? true : false
       },
-      guild: resp.guild.is_banned ? new BannedGuild(resp.guild) : new GuildCore(resp.guild, client),
-      original_guild: resp.original_guild ? (resp.original_guild.is_banned ? new BannedGuild(resp.original_guild) : new GuildCore(resp.original_guild, client)) : null
+      guild: resolveGuild(resp.guild, client, true),
+      original_guild: resp.original_guild ? resolveGuild(resp.original_guild, client, true) : null
     }
   }
 }
@@ -185,6 +196,55 @@ class PostCore extends PostBase {
   }
 }
 
+class BannedPost {
+  constructor(data) {
+    Object.assign(this, BannedPost.formatData(data));
+  }
+
+  static formatData(resp) {
+    if (!resp.id) return undefined;
+    
+    return {
+      content: {
+        title: resp.title
+      },
+      id: resp.id,
+      full_id: `t1_${resp.id}`,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      ban_reason: resp.ban_reason,
+      flags: {
+        banned: true,
+        deleted: resp.is_deleted
+      }
+    }
+  }
+}
+
+class DeletedPost {
+  constructor(data) {
+    Object.assign(this, DeletedPost.formatData(data));
+  }
+
+  static formatData(resp) {
+    if (!resp.id) return undefined;
+    
+    return {
+      content: {
+        title: resp.title
+      },
+      id: resp.id,
+      full_id: `t1_${resp.id}`,
+      link: resp.permalink,
+      full_link: `https://ruqqus.com${resp.permalink}`,
+      flags: {
+        banned: resp.is_banned,
+        deleted: true
+      }
+    }
+  }
+}
+
 class PostManager {
   constructor(client) {
     Object.defineProperty(this, "client", { value: client });
@@ -200,7 +260,8 @@ class PostManager {
   async fetch(id) {
     if (!this.client.scopes.read) throw new ScopeError(`Missing "read" scope`);
 
-    let post = new Post(await this.client.APIRequest({ type: "GET", path: `post/${id}` }), this.client);
+    let resp = await this.client.APIRequest({ type: "GET", path: `post/${id}` });
+    let post = resolvePost(resp, this.client);
 
     this.cache.push(post);
     return post;
@@ -209,4 +270,4 @@ class PostManager {
   cache = new SubmissionCache()
 }
 
-module.exports = { PostBase, Post, PostCore, PostManager };
+module.exports = { resolvePost, PostBase, Post, PostCore, BannedPost, DeletedPost, PostManager };

@@ -1,5 +1,15 @@
 const { ScopeError } = require("./error.js");
 
+function resolveUser(obj, client, core) {
+  if (obj.is_banned) {
+    return new BannedUser(obj);
+  } else if (obj.is_deleted) {
+    return new DeletedUser(obj);
+  } else {
+    return core ? new UserCore(obj, client) : new User(obj, client);
+  }
+}
+
 class UserBase {
   constructor(client) {
     Object.defineProperty(this, "client", { value: client });
@@ -21,8 +31,8 @@ class UserBase {
       page: options && options.page || 1 
     } }); if (resp.error) return;
 
-    const { Post } = require("./post.js");
-    let posts = resp.data.map(post => new Post(post, this.client));
+    const { resolvePost } = require("./post.js");
+    let posts = resp.data.map(post => resolvePost(post, this.client));
 
     if (!options || options.cache !== false) this.client.posts.cache.add(posts);
     return posts;
@@ -44,8 +54,8 @@ class UserBase {
       page: options && options.page || 1 
     } }); if (resp.error) return;
 
-    const { Comment } = require("./comment.js");
-    let comments = resp.data.map(comment => new Comment(comment, this.client));
+    const { resolveComment } = require("./comment.js");
+    let comments = resp.data.map(comment => resolveComment(comment, this.client));
 
     if (!options || options.cache !== false) this.client.comments.cache.add(comments);
     return comments;
@@ -60,6 +70,8 @@ class User extends UserBase {
 
   static formatData(resp) {
     if (!resp.id) return undefined;
+    
+    const Badge = require("./badge.js");
     
     return {
       username: resp.username,
@@ -91,10 +103,7 @@ class User extends UserBase {
         private: resp.is_private,
         premium: resp.is_premium
       },
-      badges: 
-        resp.badges.map(badge => {
-          return new (require("./badge.js"))(badge);
-        }),
+      badges: resp.badges.map(badge => new Badge(badge))
     }
   }
 }
@@ -196,13 +205,7 @@ class UserManager {
 
     let resp = await this.client.APIRequest({ type: "GET", path: `user/${username}` });
 
-    if (resp.is_banned) {
-      return new BannedUser(resp);
-    } else if (resp.is_deleted) {
-      return new DeletedUser(resp);
-    } else {
-      return new User(resp, this.client);
-    }
+    return resolveUser(resp, this.client);
   }
 
   /**
@@ -220,4 +223,4 @@ class UserManager {
   }
 }
 
-module.exports = { UserBase, User, UserCore, BannedUser, DeletedUser, UserManager }
+module.exports = { resolveUser, UserBase, User, UserCore, BannedUser, DeletedUser, UserManager }

@@ -1,5 +1,13 @@
 const { ScopeError, RuqqusAPIError } = require("./error.js");
 
+function resolveGuild(obj, client, core) {
+  if (obj.is_banned) {
+    return new BannedGuild(obj);
+  } else {
+    return core ? new GuildCore(obj, client) : new Guild(obj, client);
+  }
+}
+
 class GuildBase {
   constructor(client) {
     Object.defineProperty(this, "client", { value: client });
@@ -52,8 +60,8 @@ class GuildBase {
       ignore_pinned: options && options.ignore_pinned || false
     } });
     
-    const { Post } = require("./post.js");
-    let posts = resp.data.map(post => new Post(post, this.client));
+    const { resolvePost } = require("./post.js");
+    let posts = resp.data.map(post => resolvePost(post, this.client));
 
     if (!options || options.cache !== false) this.client.posts.cache.add(posts);
     return posts;
@@ -75,8 +83,8 @@ class GuildBase {
       page: options && options.page || 1 
     } });
 
-    const { Comment } = require("./comment.js");
-    let comments = resp.data.map(comment => new Comment(comment, this.client));
+    const { resolveComment } = require("./comment.js");
+    let comments = resp.data.map(comment => resolveComment(comment, this.client));
 
     if (!options || options.cache !== false) this.client.comments.cache.add(comments);
     return comments;
@@ -92,7 +100,7 @@ class Guild extends GuildBase {
   static formatData(resp, client) {
     if (!resp.id) return undefined;
 
-    const { UserCore, BannedUser, DeletedUser } = require("./user.js");
+    const { resolveUser } = require("./user.js");
 
     return {
       name: resp.name,
@@ -106,15 +114,7 @@ class Guild extends GuildBase {
       link: resp.permalink,
       full_link: `https://ruqqus.com${resp.permalink}`,
       subscribers: resp.subscriber_count,
-      guildmasters: resp.guildmasters.map(mod => {
-        if (mod.is_banned) {
-          return new BannedUser(mod);
-        } else if (mod.is_deleted) {
-          return new DeletedUser(mod);
-        } else {
-          return new UserCore(mod, client);
-        }
-      }),
+      guildmasters: resp.guildmasters.map(mod => resolveUser(mod, client, true)),
       icon_url: resp.profile_url.startsWith("/assets") ? `https://ruqqus.com/${resp.profile_url}` : resp.profile_url,
       banner_url: resp.banner_url.startsWith("/assets") ? `https://ruqqus.com/${resp.banner_url}` : resp.banner_url,
       created_at: resp.created_utc,
@@ -208,7 +208,7 @@ class All extends GuildBase {
       page: options && options.page || 1
     } });
 
-    return resp.data.map(guild => new Guild(guild, this.client));
+    return resp.data.map(guild => resolveGuild(guild, this.client));
   }
 }
 
@@ -230,11 +230,7 @@ class GuildManager {
     
     let resp = await this.client.APIRequest({ type: "GET", path: `guild/${name}` });
 
-    if (resp.is_banned) {
-      return new BannedGuild(resp);
-    } else {
-      return new Guild(resp, this.client);
-    }
+    return resolveGuild(resp, this.client);
   }
 
   /**
@@ -252,4 +248,4 @@ class GuildManager {
   }
 }
 
-module.exports = { GuildBase, Guild, GuildCore, BannedGuild, All, GuildManager };
+module.exports = { resolveGuild, GuildBase, Guild, GuildCore, BannedGuild, All, GuildManager };

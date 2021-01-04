@@ -7,7 +7,7 @@ const { User, BannedUser, DeletedUser, UserManager } = require("./user.js");
 
 const APIRequest = require("../util/api-request.js");
 const Config = require("../util/config.js");
-const { ScopeError } = require("./error.js");
+const { ScopeError, RuqqusAPIError } = require("./error.js");
 
 class Client extends EventEmitter {
   /**
@@ -16,6 +16,8 @@ class Client extends EventEmitter {
    * @param {Object} [options] The client options.
    * @param {String} [options.path] Path to a config file.
    * @param {String} [options.agent] Custom `user_agent`.
+   * @param {String} [options.server] Custom API server.
+   * @param {Function} [options.api_method] `Client.APIRequest` overload.
    * @constructor
    */
 
@@ -27,7 +29,7 @@ class Client extends EventEmitter {
 
     this.user_agent = options.agent || this.config.get("agent") || `ruqqus-js@${options.id}`;
 
-    this.startTime = 0;
+    this.start_time = 0;
     this.online = false,
     this.user = undefined;
 
@@ -42,6 +44,8 @@ class Client extends EventEmitter {
     };
 
     this._timeouts = new Set();
+    this._api_method = options.api_method || null;
+    this._server = options.server || null;
   }
 
   /**
@@ -56,7 +60,12 @@ class Client extends EventEmitter {
    */
 
   async APIRequest(options) {
-    return await APIRequest(options, this);
+    if (this._api_method) {
+      return await this._api_method(options, this);
+    } else {
+      if (this._server) options.server = this._server;
+      return await APIRequest(options, this);
+    }
   }
   
   _refreshToken() {
@@ -84,7 +93,7 @@ class Client extends EventEmitter {
             throw new ScopeError(`Missing "identity" scope; user data ignored`);
           }
 
-          this.startTime = Date.now();
+          this.start_time = Date.now();
           this.emit("login");
           this.online = true;
         }
@@ -95,8 +104,12 @@ class Client extends EventEmitter {
   }
 
   _checkEvents() {
-    const timer = setTimeout(() => { this._checkEvents() }, 10000);
-    this._timeouts.add(timer);
+    // TODO: Websocket events
+
+    if (this.eventNames().includes("post") || this.eventNames().includes("comment")) {
+      const timer = setTimeout(() => { this._checkEvents() }, 10000);
+      this._timeouts.add(timer);
+    }
     
     if (this.eventNames().includes("post") && this.scopes.read) {
       this.guilds.all.fetchPosts({ cache: false, ignore_pinned: true })
@@ -108,9 +121,7 @@ class Client extends EventEmitter {
             });
 
             this.posts.cache.add(posts);
-          } catch (e) {
-            // WIP - Proper error handling
-          }
+          } catch (e) { }
 
           this.posts.cache._count++;
         });
@@ -126,13 +137,22 @@ class Client extends EventEmitter {
             });
 
             this.comments.cache.add(comments);
-          } catch (e) {
-            // WIP - Proper error handling
-          }
+          } catch (e) { }
 
           this.comments.cache._count++;
         });
     }
+  }
+
+  _close(path) {
+    if (!this.online) throw new RuqqusAPIError("Cannot destroy an offline client");
+
+    this.APIRequest({ type: "POST", path })
+      .then(resp => { 
+        for (const t of this._timeouts) clearTimeout(t);
+        this._timeouts.clear();
+        this.keys = null;
+      });
   }
 
   /**
@@ -142,7 +162,7 @@ class Client extends EventEmitter {
    */
 
   get uptime() {
-    return Math.floor((Date.now() - this.startTime) / 1000);
+    return Math.floor((Date.now() - this.start_time) / 1000);
   }
   
   guilds = new GuildManager(this)
@@ -161,6 +181,8 @@ class Client extends EventEmitter {
    */
 
   login(keys) {
+    if (this.online) throw new RuqqusAPIError("Client is already online");
+
     if (!keys) keys = {};
     let cfg = this.config ? this.config.get() : null;
 
@@ -169,7 +191,7 @@ class Client extends EventEmitter {
       token: keys.token || cfg.token || "",
       code: keys.code || "",
       refresh: keys.refresh || cfg.refresh || null,
-    } : options;
+    } : keys;
 
     this.keys = {
       code: {
@@ -192,13 +214,19 @@ class Client extends EventEmitter {
   }
 
   /**
-   * Logs out and terminates connection to the user.
+   * Logs out and terminates access to the user.
    */
 
   destroy() {
-    for (const t of this._timeouts) clearTimeout(t);
-    this._timeouts.clear();
-    this.keys = null;
+    this._close("release");
+  } 
+
+  /**
+   * Terminates access to the user and permanently destroys both the refresh and access tokens.
+   */
+
+  kill() {
+    this._close("kill");
   }
 }
 
