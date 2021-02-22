@@ -123,4 +123,6 @@ Most of the discussion regarding support/suggestions happens on the [Ruqqus API 
 
 ## License
 
-MIT © 2020 Kyle Prince
+MIT © 2020 Kyle Prince, Panjkrc
+
+*As of February 22, 2021,* [acikek](https://github.com/acikek) *is no longer a maintainer of the project.* 
