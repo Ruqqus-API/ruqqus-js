@@ -17,14 +17,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/acikek/ruqqus-js.git"
+    "url": "https://github.com/Ruqqus-API/ruqqus-js.git"
   },
   "author": "acikek",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/acikek/ruqqus-js/issues"
+    "url": "https://github.com/Ruqqus-API/ruqqus-js/issues"
   },
-  "homepage": "https://github.com/acikek/ruqqus-js#readme",
+  "homepage": "https://github.com/Ruqqus-API/ruqqus-js#readme",
   "dependencies": {
     "needle": "^2.5.0"
   }

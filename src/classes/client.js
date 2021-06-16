@@ -79,7 +79,6 @@ class Client extends EventEmitter {
           this.config.set("refresh", resp.refresh_token);
         }
 
-        this.keys.refresh.refresh = resp.refresh_token || null;
         this.keys.refresh.access_token = resp.access_token;
         
         const timer = setTimeout(() => { this._refreshToken() }, (resp.expires_at * 1000) - Date.now());
