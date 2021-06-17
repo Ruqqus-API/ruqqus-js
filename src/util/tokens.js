@@ -29,7 +29,7 @@ async function fetchTokens(options) {
     throw new OAuthError("Invalid grant type", 405)
   }
 
-  let resp = await APIRequest({ type: "POST", path: "https://ruqqus.com/oauth/grant", options: keys, auth: false });
+  let resp = await APIRequest({ type: "POST", path: server ? `${server}/oauth/grant` : "https://ruqqus.com/oauth/grant", options: keys, auth: false });
   if (resp.oauth_error) throw new OAuthError(resp.oauth_error, 401);
 
   return resp;

@@ -69,7 +69,7 @@ class Client extends EventEmitter {
   }
   
   _refreshToken() {
-    require("../util/tokens.js")(this.keys.refresh.refresh ? this.keys.refresh : this.keys.code)
+    require("../util/tokens.js")(this.keys.refresh.refresh ? this.keys.refresh : this.keys.code, this._server)
       .then(async resp => {
         resp.scopes.split(",").forEach(s => {
           this.scopes[s] = true;
