@@ -12,7 +12,7 @@ const { OAuthError } = require("../classes/error.js");
  * @param {String} [options.refresh] The refresh token.
  */
 
-async function fetchTokens(options) {
+async function fetchTokens(options, server) {
   if (!options) options = {};
   let keys = {
     client_id: options.id || null,
